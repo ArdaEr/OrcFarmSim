@@ -1,0 +1,19 @@
+{
+    "name": "OrcFarm.Farming",
+    "rootNamespace": "OrcFarm.Farming",
+    "references": [
+        "OrcFarm.Core",
+        "OrcFarm.Inventory",
+        "OrcFarm.Interaction",
+        "OrcFarm.Carry"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

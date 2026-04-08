@@ -1,0 +1,40 @@
+# Orc Farm Git Workflow
+
+## Git rules
+- Never push automatically after making code changes.
+- Before any commit or push, first write a short release note in chat with:
+  1. changed files
+  2. summary of what changed
+  3. risks: compile risk, inspector risk, integration risk
+- Then propose:
+  - a commit message
+  - the branch name if a new branch is needed
+
+## Push rule
+- Only run `git push` after I explicitly say:
+  - "push it"
+  - "commit and push"
+  - "send this branch"
+
+## Commit quality
+- Do not include unrelated files.
+- Do not commit broken work on purpose.
+- Prefer small commits.
+- For Unity work, avoid touching scene YAML, prefab YAML, and project settings unless explicitly requested.
+
+## Output format before commit/push
+Always output this first:
+
+Changes in this push:
+- <file>: <what changed>
+- <file>: <what changed>
+
+Commit message:
+- <proposed commit message>
+
+Risk check:
+- Compile:
+- Inspector:
+- Integration:
+
+Then wait for approval unless I explicitly asked to commit and push.

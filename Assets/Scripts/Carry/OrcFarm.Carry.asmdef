@@ -1,0 +1,19 @@
+{
+    "name": "OrcFarm.Carry",
+    "rootNamespace": "OrcFarm.Carry",
+    "references": [
+        "OrcFarm.Core",
+        "OrcFarm.Interaction",
+        "OrcFarm.Inventory",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

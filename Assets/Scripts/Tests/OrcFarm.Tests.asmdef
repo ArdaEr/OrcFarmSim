@@ -1,0 +1,28 @@
+{
+    "name": "OrcFarm.Tests",
+    "rootNamespace": "OrcFarm.Tests",
+    "references": [
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner",
+        "OrcFarm.Core",
+        "OrcFarm.Interaction",
+        "OrcFarm.Player",
+        "OrcFarm.Farming",
+        "OrcFarm.Inventory",
+        "OrcFarm.Carry",
+        "OrcFarm.Storage"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

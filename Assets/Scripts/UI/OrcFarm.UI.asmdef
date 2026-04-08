@@ -1,0 +1,23 @@
+{
+    "name": "OrcFarm.UI",
+    "rootNamespace": "OrcFarm.UI",
+    "references": [
+        "OrcFarm.Core",
+        "OrcFarm.Interaction",
+        "OrcFarm.Player",
+        "OrcFarm.Farming",
+        "OrcFarm.Inventory",
+        "OrcFarm.Carry",
+        "OrcFarm.Storage",
+        "Unity.TextMeshPro"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
