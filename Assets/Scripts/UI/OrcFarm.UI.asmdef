@@ -9,7 +9,8 @@
         "OrcFarm.Inventory",
         "OrcFarm.Carry",
         "OrcFarm.Storage",
-        "Unity.TextMeshPro"
+        "Unity.TextMeshPro",
+        "VContainer"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

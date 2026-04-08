@@ -1,0 +1,31 @@
+{
+    "name": "OrcFarm.App",
+    "rootNamespace": "OrcFarm.App",
+    "references": [
+        "OrcFarm.Core",
+        "OrcFarm.Interaction",
+        "OrcFarm.Player",
+        "OrcFarm.Farming",
+        "OrcFarm.Inventory",
+        "OrcFarm.Carry",
+        "OrcFarm.Storage",
+        "OrcFarm.UI",
+        "VContainer",
+        "VContainer.Unity",
+        "MessagePipe",
+        "MessagePipe.VContainer",
+        "Unity.Addressables",
+        "Unity.ResourceManager",
+        "UniTask",
+        "UniTask.Addressables"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

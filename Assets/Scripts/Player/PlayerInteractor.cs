@@ -1,37 +1,32 @@
 using OrcFarm.Interaction;
 using UnityEngine;
+using VContainer;
 
 namespace OrcFarm.Player
 {
     /// <summary>
     /// Bridges the interact input binding to <see cref="IInteractionService"/>.
     ///
-    /// The detector is serialized as the concrete <see cref="InteractionDetector"/> type
-    /// because Unity cannot serialize interfaces. It is immediately stored as
-    /// <see cref="IInteractionService"/> so all runtime usage goes through the interface.
-    ///
-    /// When VContainer is introduced, replace the [SerializeField] field with
-    /// [Inject] IInteractionService and remove the concrete reference.
+    /// Both <see cref="IPlayerInputProvider"/> and <see cref="IInteractionService"/> are
+    /// received via VContainer injection (§1.3) — no SerializeField concrete references needed.
     /// </summary>
     [RequireComponent(typeof(PlayerInputSource))]
     public sealed class PlayerInteractor : MonoBehaviour
     {
-        [SerializeField] private InteractionDetector _detector;
-
         private IPlayerInputProvider _input;
         private IInteractionService  _service;
 
-        private void Awake()
-        {
-            _input   = GetComponent<PlayerInputSource>();
-            _service = _detector;
+        // ── VContainer injection ───────────────────────────────────────────────
 
-            if (_detector == null)
-            {
-                Debug.LogError($"[PlayerInteractor] _detector is not assigned on '{gameObject.name}'. Interaction disabled.", this);
-                enabled = false;
-            }
+        /// <summary>Receives dependencies from VContainer (§1.3).</summary>
+        [Inject]
+        private void Construct(IPlayerInputProvider input, IInteractionService service)
+        {
+            _input   = input;
+            _service = service;
         }
+
+        // ── Unity lifecycle ────────────────────────────────────────────────────
 
         private void Update()
         {

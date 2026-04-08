@@ -16,7 +16,7 @@ namespace OrcFarm.Carry
     /// MonoBehaviour justification: needs Unity lifecycle to manage the InputAction
     /// and to respond to per-frame drop input.
     /// </summary>
-    public sealed class CarryController : MonoBehaviour
+    public sealed class CarryController : MonoBehaviour, ICarryController
     {
         [SerializeField] private Transform _carryAnchor;
 
@@ -45,11 +45,8 @@ namespace OrcFarm.Carry
             _dropAction.AddBinding("<Gamepad>/leftShoulder");
 
             if (_carryAnchor == null)
-            {
-                Debug.LogError(
-                    $"[CarryController] _carryAnchor not assigned on '{gameObject.name}'. Carry disabled.", this);
-                enabled = false;
-            }
+                throw new System.InvalidOperationException(
+                    $"[CarryController] _carryAnchor not assigned on '{gameObject.name}'.");
         }
 
         private void OnEnable()  => _dropAction.Enable();

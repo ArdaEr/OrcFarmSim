@@ -4,7 +4,8 @@
     "references": [
         "OrcFarm.Core",
         "OrcFarm.Interaction",
-        "Unity.InputSystem"
+        "Unity.InputSystem",
+        "VContainer"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -5,7 +5,9 @@
         "OrcFarm.Core",
         "OrcFarm.Inventory",
         "OrcFarm.Interaction",
-        "OrcFarm.Carry"
+        "OrcFarm.Carry",
+        "VContainer",
+        "MessagePipe"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

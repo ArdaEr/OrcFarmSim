@@ -5,20 +5,25 @@ namespace OrcFarm.Inventory
     /// <summary>
     /// Scene-side owner of the player's <see cref="Inventory"/> domain model.
     ///
-    /// Attach to a single scene GameObject (e.g. the Player root or a dedicated
-    /// "GameSystems" object). Assign a reference to any <see cref="OrcFarm.Farming.FarmPlot"/>
-    /// that should consume seeds and fertilizer.
+    /// Slot counts are sourced from <see cref="InventoryConfig"/> so designers can adjust
+    /// layout without recompiling (§6.5). If <c>_config</c> is unassigned the inventory
+    /// falls back to built-in defaults (5 hotbar / 10 main).
     ///
     /// Starting item counts are configurable in the Inspector so playtests can begin
-    /// with a known supply without writing any extra setup code.
+    /// with a known supply without extra setup code.
     ///
     /// Debug refill (Play Mode only):
     ///   Set <c>_debugAddSeeds</c> / <c>_debugAddFertilizer</c> to the desired amounts,
     ///   then tick <c>_applyDebugRefill</c> in the Inspector. The refill is applied
     ///   immediately and the checkbox resets itself.
     /// </summary>
-    public sealed class PlayerInventory : MonoBehaviour
+    public sealed class PlayerInventory : MonoBehaviour, IPlayerInventory
     {
+        // ── Config ────────────────────────────────────────────────────────────
+
+        [Tooltip("Inventory slot layout. If unassigned, defaults (5 hotbar / 10 main) are used.")]
+        [SerializeField] private InventoryConfig _config;
+
         // ── Startup ───────────────────────────────────────────────────────────
 
         [Tooltip("Number of HeadSeeds added to inventory at start.")]
@@ -40,13 +45,23 @@ namespace OrcFarm.Inventory
                  "runtime inventory. The checkbox resets itself after one use.")]
         [SerializeField] private bool _applyDebugRefill;
 
-        private readonly Inventory _inventory = new Inventory();
+        private Inventory _inventory;
 
         // ── Unity lifecycle ────────────────────────────────────────────────────
 
         private void Awake()
         {
             _applyDebugRefill = false; // discard any stale tick left from Edit Mode
+
+            if (_config != null)
+            {
+                _config.Validate();
+                _inventory = new Inventory(_config.HotbarSize, _config.MainInventorySize);
+            }
+            else
+            {
+                _inventory = new Inventory(); // default: 5 hotbar, 10 main
+            }
 
             if (_startingSeeds > 0)
                 _inventory.TryAdd(ItemType.HeadSeed, _startingSeeds);
@@ -56,14 +71,12 @@ namespace OrcFarm.Inventory
         }
 
 #if UNITY_EDITOR
-        // OnValidate fires whenever a serialized field changes in the Inspector.
-        // The Application.isPlaying guard restricts this to Play Mode only.
         private void OnValidate()
         {
             if (!Application.isPlaying || !_applyDebugRefill)
                 return;
 
-            _applyDebugRefill = false; // one-shot: reset immediately so repeated ticks are explicit
+            _applyDebugRefill = false;
 
             if (_debugAddSeeds > 0)
                 _inventory.TryAdd(ItemType.HeadSeed, _debugAddSeeds);
@@ -78,21 +91,18 @@ namespace OrcFarm.Inventory
         }
 #endif
 
-        // ── Public API ─────────────────────────────────────────────────────────
+        // ── IPlayerInventory ───────────────────────────────────────────────────
 
-        /// <summary>Total count of <paramref name="type"/> across all inventory slots.</summary>
+        /// <inheritdoc/>
         public int GetCount(ItemType type) => _inventory.GetCount(type);
 
-        /// <summary>True if at least <paramref name="count"/> of <paramref name="type"/> are held.</summary>
+        /// <inheritdoc/>
         public bool Has(ItemType type, int count = 1) => _inventory.GetCount(type) >= count;
 
-        /// <summary>
-        /// Removes <paramref name="count"/> of <paramref name="type"/> atomically.
-        /// Returns false without modifying inventory if the quantity is insufficient.
-        /// </summary>
+        /// <inheritdoc/>
         public bool TryConsume(ItemType type, int count = 1) => _inventory.TryRemove(type, count);
 
-        /// <summary>Adds <paramref name="count"/> of <paramref name="type"/>. Returns false if no space.</summary>
+        /// <inheritdoc/>
         public bool TryAdd(ItemType type, int count = 1) => _inventory.TryAdd(type, count);
     }
 }

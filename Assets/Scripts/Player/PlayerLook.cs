@@ -1,4 +1,5 @@
 using UnityEngine;
+using VContainer;
 
 namespace OrcFarm.Player
 {
@@ -28,15 +29,19 @@ namespace OrcFarm.Player
         private IPlayerInputProvider _input;
         private float _pitch;
 
+        // ── VContainer injection ───────────────────────────────────────────────
+
+        /// <summary>Receives <see cref="IPlayerInputProvider"/> from VContainer (§1.3).</summary>
+        [Inject]
+        private void Construct(IPlayerInputProvider input) => _input = input;
+
+        // ── Unity lifecycle ────────────────────────────────────────────────────
+
         private void Awake()
         {
-            _input = GetComponent<PlayerInputSource>();
-
             if (_cameraPivot == null)
-            {
-                Debug.LogError($"[PlayerLook] _cameraPivot is not assigned on '{gameObject.name}'. Look disabled.", this);
-                enabled = false;
-            }
+                throw new System.InvalidOperationException(
+                    $"[PlayerLook] _cameraPivot is not assigned on '{gameObject.name}'.");
         }
 
         // Zero allocations: Vector2/Vector3/Quaternion are value types;

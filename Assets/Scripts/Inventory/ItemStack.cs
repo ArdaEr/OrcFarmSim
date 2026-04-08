@@ -42,8 +42,10 @@ namespace OrcFarm.Inventory
         /// <inheritdoc/>
         public override bool Equals(object obj) => obj is ItemStack other && Equals(other);
 
+        private const int HashPrime = 397;
+
         /// <inheritdoc/>
-        public override int GetHashCode() => ((int)Type * 397) ^ Count;
+        public override int GetHashCode() => ((int)Type * HashPrime) ^ Count;
 
         /// <inheritdoc/>
         public override string ToString() => IsEmpty ? "Empty" : $"{Count}x {Type}";

@@ -5,8 +5,8 @@ namespace OrcFarm.Inventory
     /// <summary>
     /// In-memory inventory model with a hotbar and a main section.
     ///
-    /// Pure C# — no UnityEngine dependency (§1.2). Construct with <c>new Inventory()</c>
-    /// and inject via <see cref="IPlayerInputProvider"/> or a future VContainer binding.
+    /// Pure C# — no UnityEngine dependency (§1.2). Slot counts are supplied via the
+    /// constructor so they can be sourced from <see cref="InventoryConfig"/> (§6.5).
     ///
     /// Add behaviour:
     ///   Hotbar is preferred over main inventory.
@@ -20,14 +20,29 @@ namespace OrcFarm.Inventory
     public sealed class Inventory
     {
         /// <summary>Number of hotbar slots.</summary>
-        public const int HotbarSize = 5;
+        public int HotbarSize { get; }
 
         /// <summary>Number of main inventory slots.</summary>
-        public const int MainSize = 10;
+        public int MainSize { get; }
 
-        private readonly ItemStack[] _hotbar = new ItemStack[HotbarSize];
-        private readonly ItemStack[] _main   = new ItemStack[MainSize];
+        private readonly ItemStack[] _hotbar;
+        private readonly ItemStack[] _main;
         private int _activeHotbarSlot;
+
+        /// <param name="hotbarSize">Number of hotbar slots (default 5).</param>
+        /// <param name="mainSize">Number of main inventory slots (default 10).</param>
+        public Inventory(int hotbarSize = 5, int mainSize = 10)
+        {
+            if (hotbarSize < 1)
+                throw new ArgumentOutOfRangeException(nameof(hotbarSize), "Must be >= 1.");
+            if (mainSize < 1)
+                throw new ArgumentOutOfRangeException(nameof(mainSize), "Must be >= 1.");
+
+            HotbarSize = hotbarSize;
+            MainSize   = mainSize;
+            _hotbar    = new ItemStack[hotbarSize];
+            _main      = new ItemStack[mainSize];
+        }
 
         // ── Read ──────────────────────────────────────────────────────────────
 
@@ -139,10 +154,6 @@ namespace OrcFarm.Inventory
             return false;
         }
 
-        /// <summary>
-        /// Removes up to <paramref name="toRemove"/> of <paramref name="type"/> from
-        /// <paramref name="slots"/>. Clears a slot when its count reaches zero.
-        /// </summary>
         /// <returns>Remainder that could not be removed from this array.</returns>
         private static int DrainFromArray(ItemStack[] slots, ItemType type, int toRemove)
         {
@@ -160,17 +171,16 @@ namespace OrcFarm.Inventory
             return toRemove;
         }
 
-        private static void GuardHotbarIndex(int index)
+        private void GuardHotbarIndex(int index)
         {
-            // Cast to uint collapses the negative-or-too-large check into one branch.
-            if ((uint)index >= HotbarSize)
+            if ((uint)index >= (uint)HotbarSize)
                 throw new ArgumentOutOfRangeException(
                     nameof(index), $"Hotbar index must be 0–{HotbarSize - 1}, got {index}.");
         }
 
-        private static void GuardMainIndex(int index)
+        private void GuardMainIndex(int index)
         {
-            if ((uint)index >= MainSize)
+            if ((uint)index >= (uint)MainSize)
                 throw new ArgumentOutOfRangeException(
                     nameof(index), $"Main inventory index must be 0–{MainSize - 1}, got {index}.");
         }

@@ -26,8 +26,10 @@ namespace OrcFarm.Interaction
         // Storing the Collider lets FindNearest use ClosestPoint for an accurate range check
         // that matches how the SphereCollider itself detects overlaps — by surface proximity,
         // not pivot-to-pivot distance (§5.2 — no GetComponent in Update).
+        private const int InitialCandidateCapacity = 8;
+
         private readonly List<(IInteractable interactable, Transform transform, Collider collider)> _candidates
-            = new List<(IInteractable, Transform, Collider)>(8);
+            = new List<(IInteractable, Transform, Collider)>(InitialCandidateCapacity);
 
         /// <inheritdoc/>
         public IInteractable CurrentTarget { get; private set; }

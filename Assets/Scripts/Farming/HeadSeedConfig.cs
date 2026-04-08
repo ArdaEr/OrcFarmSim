@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace OrcFarm.Farming
 {
@@ -13,31 +14,43 @@ namespace OrcFarm.Farming
     {
         [Tooltip("Total seconds for the crop to fully grow after planting.")]
         [Min(1f)]
-        public float GrowthDuration = 60f;
+        [FormerlySerializedAs("GrowthDuration")]
+        [SerializeField] private float _growthDuration = 60f;
 
         [Tooltip("Fraction through GrowthDuration at which the care checkpoint opens (0.1–0.9).")]
         [Range(0.1f, 0.9f)]
-        public float CareCheckpointFraction = 0.5f;
+        [FormerlySerializedAs("CareCheckpointFraction")]
+        [SerializeField] private float _careCheckpointFraction = 0.5f;
 
         [Tooltip("Seconds the player has to respond before the crop fails.")]
         [Min(1f)]
-        public float CareWindowDuration = 15f;
+        [FormerlySerializedAs("CareWindowDuration")]
+        [SerializeField] private float _careWindowDuration = 15f;
+
+        /// <summary>Total seconds for the crop to fully grow after planting.</summary>
+        public float GrowthDuration => _growthDuration;
+
+        /// <summary>Fraction through GrowthDuration at which the care checkpoint opens (0.1–0.9).</summary>
+        public float CareCheckpointFraction => _careCheckpointFraction;
+
+        /// <summary>Seconds the player has to respond before the crop fails.</summary>
+        public float CareWindowDuration => _careWindowDuration;
 
         /// <summary>Absolute seconds-after-planting when the care window opens.</summary>
-        public float CareCheckpointTime => GrowthDuration * CareCheckpointFraction;
+        public float CareCheckpointTime => _growthDuration * _careCheckpointFraction;
 
         private void OnValidate()
         {
-            GrowthDuration         = Mathf.Max(1f, GrowthDuration);
-            CareCheckpointFraction = Mathf.Clamp(CareCheckpointFraction, 0.1f, 0.9f);
-            CareWindowDuration     = Mathf.Max(1f, CareWindowDuration);
+            _growthDuration         = Mathf.Max(1f, _growthDuration);
+            _careCheckpointFraction = Mathf.Clamp(_careCheckpointFraction, 0.1f, 0.9f);
+            _careWindowDuration     = Mathf.Max(1f, _careWindowDuration);
 
             // Guard: enough time must remain after care to complete growth
-            float remainingAfterCare = GrowthDuration * (1f - CareCheckpointFraction);
-            if (CareWindowDuration >= remainingAfterCare)
+            float remainingAfterCare = _growthDuration * (1f - _careCheckpointFraction);
+            if (_careWindowDuration >= remainingAfterCare)
             {
                 Debug.LogError(
-                    $"[HeadSeedConfig '{name}'] CareWindowDuration ({CareWindowDuration}s) is " +
+                    $"[HeadSeedConfig '{name}'] CareWindowDuration ({_careWindowDuration}s) is " +
                     $">= the post-checkpoint growth window ({remainingAfterCare}s). " +
                     $"Reduce CareWindowDuration or increase GrowthDuration.", this);
             }
@@ -49,15 +62,15 @@ namespace OrcFarm.Farming
         /// </summary>
         public void Validate()
         {
-            if (GrowthDuration <= 0f)
+            if (_growthDuration <= 0f)
                 throw new System.InvalidOperationException(
                     $"[HeadSeedConfig '{name}'] GrowthDuration must be > 0.");
 
-            if (CareWindowDuration <= 0f)
+            if (_careWindowDuration <= 0f)
                 throw new System.InvalidOperationException(
                     $"[HeadSeedConfig '{name}'] CareWindowDuration must be > 0.");
 
-            if (CareCheckpointFraction < 0.1f || CareCheckpointFraction > 0.9f)
+            if (_careCheckpointFraction < 0.1f || _careCheckpointFraction > 0.9f)
                 throw new System.InvalidOperationException(
                     $"[HeadSeedConfig '{name}'] CareCheckpointFraction must be between 0.1 and 0.9.");
         }

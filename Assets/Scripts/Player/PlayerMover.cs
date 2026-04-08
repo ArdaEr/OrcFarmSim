@@ -1,4 +1,5 @@
 using UnityEngine;
+using VContainer;
 
 namespace OrcFarm.Player
 {
@@ -19,23 +20,30 @@ namespace OrcFarm.Player
         [SerializeField] private float _speed   = 4f;
         [SerializeField] private float _gravity = -9.81f;
 
+        private const float GroundedSnapVelocity = -2f;
+
         private IPlayerInputProvider _input;
         private CharacterController  _cc;
         private float                _verticalVelocity;
 
+        // ── VContainer injection ───────────────────────────────────────────────
+
+        /// <summary>Receives <see cref="IPlayerInputProvider"/> from VContainer (§1.3).</summary>
+        [Inject]
+        private void Construct(IPlayerInputProvider input) => _input = input;
+
+        // ── Unity lifecycle ────────────────────────────────────────────────────
+
         private void Awake()
         {
-            _input = GetComponent<PlayerInputSource>();
-            _cc    = GetComponent<CharacterController>();
+            _cc = GetComponent<CharacterController>();
         }
 
         // Zero allocations: all Vector3 operations are value-type arithmetic (§3.1).
-        // Uses sqrMagnitude implicitly avoided — forward.Normalize() handles the
-        // near-zero case (sets to zero if magnitude < 1e-5) so no extra branch needed.
         private void Update()
         {
             if (_cc.isGrounded && _verticalVelocity < 0f)
-                _verticalVelocity = -2f; // small constant keeps the controller grounded
+                _verticalVelocity = GroundedSnapVelocity; // small constant keeps the controller grounded
 
             _verticalVelocity += _gravity * Time.deltaTime;
 

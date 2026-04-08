@@ -1,3 +1,4 @@
+using OrcFarm.Core;
 using OrcFarm.Interaction;
 using UnityEngine;
 
@@ -5,7 +6,8 @@ namespace OrcFarm.Carry
 {
     /// <summary>
     /// A harvested head in the world. Implements <see cref="IInteractable"/> so the player
-    /// can pick it up through the existing interaction flow.
+    /// can pick it up through the existing interaction flow, and <see cref="IPoolable"/>
+    /// so the pool can cleanly reset it between uses (§3.5).
     ///
     /// While carried the Collider is disabled (preventing physics conflicts with the player
     /// capsule) and the Rigidbody is made kinematic (stopping physics simulation).
@@ -16,18 +18,17 @@ namespace OrcFarm.Carry
     /// the candidate list. Re-enabling it at the drop position fires <c>OnTriggerEnter</c>
     /// if still in range, making the head targetable again.
     ///
-    /// Setup: assign the player's <see cref="CarryController"/> in the inspector.
-    /// The GameObject also needs a Rigidbody and at least one Collider.
+    /// The <see cref="ICarryController"/> reference is set via <see cref="Initialize"/> after
+    /// the pool retrieves this instance — not via the inspector.
     /// </summary>
     [RequireComponent(typeof(Rigidbody))]
     [RequireComponent(typeof(Collider))]
-    public sealed class HarvestedHead : MonoBehaviour, IInteractable
+    public sealed class HarvestedHead : MonoBehaviour, IInteractable, IPoolable
     {
-        [SerializeField] private CarryController _carryController;
-
-        private Rigidbody _rb;
-        private Collider  _col;
-        private bool      _isCarried;
+        private Rigidbody        _rb;
+        private Collider         _col;
+        private bool             _isCarried;
+        private ICarryController _carry;
 
         // ── IInteractable ──────────────────────────────────────────────────────
 
@@ -38,26 +39,52 @@ namespace OrcFarm.Carry
         /// <inheritdoc/>
         public void OnInteract()
         {
-            if (_carryController == null)
+            if (_carry == null)
             {
                 Debug.LogWarning(
-                    $"[HarvestedHead] Cannot pick up '{gameObject.name}' — CarryController is null.", this);
+                    $"[HarvestedHead] Cannot pick up '{gameObject.name}' — ICarryController is null.", this);
                 return;
             }
 
-            _carryController.PickUp(this);
+            _carry.PickUp(this);
         }
 
-        // ── Called by FarmPlot only ────────────────────────────────────────────
+        // ── IPoolable ──────────────────────────────────────────────────────────
+
+        /// <inheritdoc/>
+        public void OnGetFromPool()  { } // positioning and activation handled by the pool
+
+        /// <inheritdoc/>
+        public void OnReturnToPool() { } // deactivation and re-parenting handled by the pool
+
+        /// <inheritdoc/>
+        /// <remarks>
+        /// Clears the carry reference, resets physics to the dropped (non-kinematic) state,
+        /// and re-enables the collider so the head is interactable when retrieved.
+        /// </remarks>
+        public void ResetState()
+        {
+            _isCarried = false;
+            _carry     = null;
+
+            transform.SetParent(null);
+
+            _rb.isKinematic = false;
+            _rb.linearVelocity  = Vector3.zero;
+            _rb.angularVelocity = Vector3.zero;
+
+            _col.enabled = true;
+        }
+
+        // ── Initialization ─────────────────────────────────────────────────────
 
         /// <summary>
-        /// Assigns the CarryController after Instantiate. Must be called before the
-        /// player can interact with this head. FarmPlot calls this immediately after
-        /// spawning the prefab so the reference is set before Start() runs.
+        /// Sets the carry controller after the pool retrieves this instance.
+        /// Must be called before the player can interact with this head.
         /// </summary>
-        public void Initialize(CarryController carryController)
+        public void Initialize(ICarryController carryController)
         {
-            _carryController = carryController;
+            _carry = carryController;
         }
 
         // ── Unity lifecycle ────────────────────────────────────────────────────
@@ -68,21 +95,11 @@ namespace OrcFarm.Carry
             _col = GetComponent<Collider>();
         }
 
-        private void Start()
-        {
-            if (_carryController == null)
-            {
-                Debug.LogWarning(
-                    $"[HarvestedHead] CarryController not assigned on '{gameObject.name}'. " +
-                    "Call Initialize() or assign in the inspector for pickup to work.", this);
-            }
-        }
-
         // ── Called by CarryController only ─────────────────────────────────────
 
         /// <summary>
         /// Disables physics and collision, then parents this head to the carry anchor.
-        /// Do not call this directly — use <see cref="CarryController.PickUp"/> instead.
+        /// Do not call this directly — use <see cref="ICarryController.PickUp"/> instead.
         /// </summary>
         internal void AttachToAnchor(Transform anchor)
         {
@@ -91,11 +108,9 @@ namespace OrcFarm.Carry
             // Disable the collider first.
             // Unity fires OnTriggerExit on the InteractionDetector's sphere when a
             // non-trigger collider is disabled, removing this head from its candidate list.
-            if (_col != null) _col.enabled = false;
+            _col.enabled = false;
 
             // Stop any in-progress motion before making kinematic.
-            // Guard: setting velocity on an already-kinematic body (e.g. a stored head
-            // re-entering carry) is unsupported and produces a Unity warning.
             if (!_rb.isKinematic)
             {
                 _rb.linearVelocity  = Vector3.zero;
@@ -110,14 +125,11 @@ namespace OrcFarm.Carry
 
         /// <summary>
         /// Re-parents this head under <paramref name="storageRoot"/> while keeping it in its
-        /// current disabled-physics state. <c>_isCarried</c> remains true so
-        /// <see cref="CanInteract"/> stays false and the head is invisible to the detector.
-        /// Do not call this directly — use <see cref="CarryController.TryStore"/> instead.
+        /// current disabled-physics state.
+        /// Do not call this directly — use <see cref="ICarryController.TryStore"/> instead.
         /// </summary>
         internal void StoreInto(Transform storageRoot)
         {
-            // Physics already kinematic, collider already disabled from being carried —
-            // no state changes needed beyond re-parenting.
             transform.SetParent(storageRoot);
             transform.localPosition = Vector3.zero;
             transform.localRotation = Quaternion.identity;
@@ -125,7 +137,7 @@ namespace OrcFarm.Carry
 
         /// <summary>
         /// Detaches from the carry anchor, re-enables physics, and applies a drop impulse.
-        /// Do not call this directly — use <see cref="CarryController.Drop"/> instead.
+        /// Do not call this directly — use <see cref="ICarryController.Drop"/> instead.
         /// </summary>
         internal void DetachToWorld(Vector3 position, Vector3 impulse)
         {
@@ -134,14 +146,10 @@ namespace OrcFarm.Carry
             transform.SetParent(null);
             transform.position = position;
 
-            // Restore physics before re-enabling the collider so the Rigidbody
-            // is ready to respond to the impulse when the collider comes back.
             _rb.isKinematic = false;
 
             // Re-enable collider at the drop position.
-            // If within the InteractionDetector sphere, OnTriggerEnter fires and
-            // adds this head back to the candidate list.
-            if (_col != null) _col.enabled = true;
+            _col.enabled = true;
 
             _rb.AddForce(impulse, ForceMode.Impulse);
         }
