@@ -3,6 +3,7 @@ using OrcFarm.Farming;
 using OrcFarm.Interaction;
 using OrcFarm.Inventory;
 using OrcFarm.Storage;
+using OrcFarm.Workers;
 using TMPro;
 using UnityEngine;
 using VContainer;
@@ -145,6 +146,9 @@ namespace OrcFarm.UI
                 return _carry.IsCarrying
                     ? "E:  Store head"
                     : "E:  Retrieve head  (" + storage.StoredCount + ")";
+
+            if (target is KeepInteractable)
+                return "E:  Keep orc";
 
             return "E:  Interact";
         }

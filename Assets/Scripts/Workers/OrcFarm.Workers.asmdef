@@ -1,17 +1,9 @@
 {
-    "name": "OrcFarm.UI",
-    "rootNamespace": "OrcFarm.UI",
+    "name": "OrcFarm.Workers",
+    "rootNamespace": "OrcFarm.Workers",
     "references": [
-        "OrcFarm.Core",
         "OrcFarm.Interaction",
-        "OrcFarm.Player",
-        "OrcFarm.Farming",
-        "OrcFarm.Inventory",
-        "OrcFarm.Carry",
-        "OrcFarm.Storage",
-        "OrcFarm.Workers",
-        "Unity.TextMeshPro",
-        "VContainer"
+        "OrcFarm.Carry"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

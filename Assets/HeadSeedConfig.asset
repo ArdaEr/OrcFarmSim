@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 52dea3cd5ad69c14ab2b06af974b0f08, type: 3}
   m_Name: HeadSeedConfig
   m_EditorClassIdentifier: OrcFarm.Farming::OrcFarm.Farming.HeadSeedConfig
-  GrowthDuration: 3
-  CareCheckpointFraction: 0.5
-  CareWindowDuration: 1
+  _growthDuration: 15
+  _careCheckpointFraction: 0.5
+  _careWindowDuration: 5
+  _plantedConfirmationDuration: 1.5

@@ -1,3 +1,4 @@
+using System.Collections;
 using OrcFarm.Carry;
 using OrcFarm.Interaction;
 using TMPro;
@@ -63,10 +64,20 @@ namespace OrcFarm.Assembly
         [Tooltip("Tendency label shown in the assembly result readout.")]
         [SerializeField] private string _tendencyLabel = "Unknown";
 
+        [Tooltip("Seconds the result readout stays visible before auto-clearing.")]
+        [Min(0.1f)]
+        [SerializeField] private float _readoutClearDelay = 4f;
+
         // Inactive child that receives consumed heads.
         // Any head parented here becomes inactive-in-hierarchy (renderer hidden,
         // collider already disabled from pickup) without a per-head SetActive call.
         private Transform _consumedRoot;
+
+        // Cached to avoid a new allocation each time the readout is shown (§3.9).
+        private WaitForSeconds _clearWait;
+
+        // Tracks the active clear coroutine so it can be cancelled on rapid re-assembly.
+        private Coroutine _clearCoroutine;
 
         // ── IInteractable ──────────────────────────────────────────────────────
 
@@ -106,6 +117,8 @@ namespace OrcFarm.Assembly
             consumeGo.SetActive(false);
             _consumedRoot = consumeGo.transform;
 
+            _clearWait = new WaitForSeconds(_readoutClearDelay);
+
             if (_resultText != null)
                 _resultText.text = string.Empty;
         }
@@ -135,6 +148,20 @@ namespace OrcFarm.Assembly
                 "Orc assembled\n" +
                 "Quality:    " + _qualityLabel  + "\n" +
                 "Tendency:   " + _tendencyLabel;
+
+            // Cancel any pending clear from a previous assembly before starting a new one.
+            if (_clearCoroutine != null)
+                StopCoroutine(_clearCoroutine);
+
+            _clearCoroutine = StartCoroutine(ClearResultAfterDelay());
+        }
+
+        private IEnumerator ClearResultAfterDelay()
+        {
+            yield return _clearWait;
+            if (_resultText != null)
+                _resultText.text = string.Empty;
+            _clearCoroutine = null;
         }
 
         [System.Diagnostics.Conditional("UNITY_EDITOR")]

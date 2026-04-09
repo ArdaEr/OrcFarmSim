@@ -12,7 +12,13 @@ namespace OrcFarm.App
     ///
     /// Subscribes to <see cref="CropHarvestedSignal"/>, retrieves a pre-warmed
     /// <see cref="HarvestedHead"/> from <see cref="HarvestedHeadPool"/> (§3.4, §3.6),
-    /// initializes it with the carry controller, and hands it off for pickup.
+    /// and initializes it with the carry controller so the player can pick it up
+    /// manually via the interaction system.
+    ///
+    /// The head is not auto-carried. It spawns at the plot position and lands on
+    /// the ground as a world object with its collider enabled, making it visible to
+    /// both the player's <see cref="InteractionDetector"/> and the hauler's
+    /// <see cref="OrcFarm.Workers.HaulerWorker"/> search.
     ///
     /// Subscriptions are disposed when the scope is torn down (§2.4).
     /// </summary>
@@ -61,7 +67,7 @@ namespace OrcFarm.App
             }
 
             head.Initialize(_carry);
-            _carry.PickUp(head);
+            //_carry.PickUp(head);
         }
     }
 }

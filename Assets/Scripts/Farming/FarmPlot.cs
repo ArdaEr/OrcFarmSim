@@ -203,6 +203,7 @@ namespace OrcFarm.Farming
         [System.Diagnostics.Conditional("UNITY_EDITOR")]
         private void LogTransition(PlotState from, PlotState to)
         {
+            if (from == to) return;
             Debug.Log($"[FarmPlot '{gameObject.name}'] {from} → {to}", this);
         }
 

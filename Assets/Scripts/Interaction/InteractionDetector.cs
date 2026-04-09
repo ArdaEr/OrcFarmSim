@@ -31,6 +31,9 @@ namespace OrcFarm.Interaction
         private readonly List<(IInteractable interactable, Transform transform, Collider collider)> _candidates
             = new List<(IInteractable, Transform, Collider)>(InitialCandidateCapacity);
 
+        // Pre-allocated for the spawn-inside-sphere fallback scan (§5.3).
+        private readonly Collider[] _scanBuffer = new Collider[InitialCandidateCapacity];
+
         /// <inheritdoc/>
         public IInteractable CurrentTarget { get; private set; }
 
@@ -51,6 +54,14 @@ namespace OrcFarm.Interaction
 
         private void Update()
         {
+            // Fallback: Unity does not fire OnTriggerEnter when a collider is activated
+            // or spawned inside an existing trigger volume (e.g. a harvested head that
+            // spawns at the plot while the player is standing next to it).
+            // Scan once per frame only when the candidate list is empty so there is no
+            // per-frame cost while at least one candidate is already tracked.
+            if (_candidates.Count == 0)
+                ScanForMissedEntries();
+
             CurrentTarget = FindNearest();
         }
 
@@ -61,10 +72,23 @@ namespace OrcFarm.Interaction
                 CurrentTarget.OnInteract();
         }
 
+        // Populates candidates for colliders that enter the sphere normally.
         private void OnTriggerEnter(Collider other)
         {
             if (other.TryGetComponent(out IInteractable interactable))
                 _candidates.Add((interactable, other.transform, other));
+        }
+
+        // Populates candidates for colliders that were already inside the sphere when
+        // they were activated — OnTriggerEnter does not fire in that case.
+        private void ScanForMissedEntries()
+        {
+            int count = Physics.OverlapSphereNonAlloc(transform.position, _range, _scanBuffer);
+            for (int i = 0; i < count; i++)
+            {
+                if (_scanBuffer[i].TryGetComponent(out IInteractable interactable))
+                    _candidates.Add((interactable, _scanBuffer[i].transform, _scanBuffer[i]));
+            }
         }
 
         private void OnTriggerExit(Collider other)

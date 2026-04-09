@@ -52,7 +52,7 @@ namespace OrcFarm.Carry
         // ── IPoolable ──────────────────────────────────────────────────────────
 
         /// <inheritdoc/>
-        public void OnGetFromPool()  { } // positioning and activation handled by the pool
+        public void OnGetFromPool() => ResetState();
 
         /// <inheritdoc/>
         public void OnReturnToPool() { } // deactivation and re-parenting handled by the pool
