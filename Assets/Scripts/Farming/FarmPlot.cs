@@ -33,6 +33,19 @@ namespace OrcFarm.Farming
         private FarmPlotStateMachine            _stateMachine;
         private PlotState                       _plotState = PlotState.Empty;
 
+#if UNITY_EDITOR
+        // ── Debug hooks (Play Mode only) ───────────────────────────────────────
+        // One-shot bools: tick in the Inspector during Play Mode; auto-reset after
+        // one frame. Same pattern as PlayerInventory._applyDebugRefill.
+
+        [Header("Debug  —  Play Mode only")]
+        [Tooltip("Advances a Growing plot to NeedsCare immediately. Auto-resets after firing.")]
+        [SerializeField] private bool _debugForceNeedsCare;
+
+        [Tooltip("Advances a Growing or NeedsCare plot to ReadyToHarvest immediately. Auto-resets after firing.")]
+        [SerializeField] private bool _debugForceReadyToHarvest;
+#endif
+
         // ── VContainer injection ───────────────────────────────────────────────
 
         /// <summary>Receives services from VContainer (§1.3).</summary>
@@ -132,12 +145,44 @@ namespace OrcFarm.Farming
 
             _config.Validate();
 
+#if UNITY_EDITOR
+            _debugForceNeedsCare      = false; // discard any stale tick left from Edit Mode
+            _debugForceReadyToHarvest = false;
+#endif
             _stateMachine = new FarmPlotStateMachine();
             TransitionTo(PlotState.Empty);
         }
 
         // Controllers call StateMachine.Update(); all branching lives inside state classes (§7.5).
-        private void Update() => _stateMachine.Update();
+        private void Update()
+        {
+#if UNITY_EDITOR
+            TickDebugHooks();
+#endif
+            _stateMachine.Update();
+        }
+
+#if UNITY_EDITOR
+        // Runs before the state machine so the forced state is active for the
+        // remainder of this frame's tick. Both fields are cleared before the
+        // transition fires so a single inspector tick never fires twice.
+        private void TickDebugHooks()
+        {
+            if (_debugForceNeedsCare)
+            {
+                _debugForceNeedsCare = false;
+                if (_plotState == PlotState.Growing)
+                    TransitionTo(PlotState.NeedsCare);
+            }
+
+            if (_debugForceReadyToHarvest)
+            {
+                _debugForceReadyToHarvest = false;
+                if (_plotState == PlotState.Growing || _plotState == PlotState.NeedsCare)
+                    TransitionTo(PlotState.ReadyToHarvest);
+            }
+        }
+#endif
 
         // ── Helpers ────────────────────────────────────────────────────────────
 

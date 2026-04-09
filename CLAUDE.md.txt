@@ -38,3 +38,174 @@ Risk check:
 - Integration:
 
 Then wait for approval unless I explicitly asked to commit and push.
+
+The refactored based on the # Code Review Rules — MadboxTest
+
+> Every piece of review feedback *must cite a specific rule number* (e.g. "Violates §3.1").
+> A rule is either *PASS* or *FAIL* — there is no "soft suggestion."
+
+---
+
+## 1. Architecture & Separation of Concerns
+
+| # | Rule | Rationale |
+|---|------|-----------|
+| 1.1 | *No business logic in Views or MonoBehaviours that serve as Views.* Views handle animation, rendering, and input forwarding only. | Keeps the View layer replaceable and testable. |
+| 1.2 | *No UnityEngine imports in the Model layer* (except value types: Vector3, Quaternion, Color). | Models must be pure C# so they can run in unit tests without Play mode. |
+| 1.3 | *All dependencies provided via VContainer constructor injection or [Inject] methods.* No new Service() inside consuming classes. | Enforces inversion of control and makes dependencies explicit. |
+| 1.4 | *No static singletons.* Any public static Instance accessor is a blocking rejection. | Singletons create hidden coupling, are untestable, and evolve into god classes. |
+| 1.5 | *Controllers orchestrate — they never manipulate Transforms, Animators, or UI elements directly.* They call methods on View classes. | Maintains MVC boundary. |
+| 1.6 | *One responsibility per class.* If the class name contains "And" or acts as a "Manager" for 2+ unrelated concerns, it must be split. | Prevents god classes. |
+| 1.7 | *No upward dependency flow.* UI may depend on Core/Features; Core must never reference UI or scene-specific code. | Preserves layered architecture. |
+| 1.8 | *Every injected service must have a corresponding interface* (IInputProvider, IAddressablesService, etc.). | Enables mocking and substitution for tests. |
+| 1.9 | *States access their owner controller only through a context interface* (IPlayerStateContext, IEnemyStateContext), never via the concrete class. | Limits surface area; states only see what they need. |
+
+---
+
+## 2. Event System & Communication
+
+| # | Rule | Rationale |
+|---|------|-----------|
+| 2.1 | *All inter-system communication via MessagePipe signals.* No direct references between unrelated systems (e.g. EnemySpawner must not hold a reference to ScoreUI). | Loose coupling between features. |
+| 2.2 | *Signals are `readonly struct`s with immutable fields.* No classes, no mutable properties. | Zero allocation, thread-safe, no side effects. |
+| 2.3 | *All signal types registered in RootLifetimeScope* via RegisterMessageBroker<T>(). | Single source of truth for event registration. |
+| 2.4 | *Every Subscribe() call must have a corresponding Dispose().* Subscriptions are disposed in OnDestroy(), scope teardown, or IDisposable cleanup. | Prevents memory leaks from dangling subscriptions. |
+| 2.5 | *No UnityEvent for system-to-system communication.* UnityEvents are only acceptable for single-component inspector wiring (e.g. Button.onClick in a UI prefab). | UnityEvents are slower, harder to trace, and not type-safe across systems. |
+| 2.6 | *Signal naming convention:* past tense for notifications (EnemyDied, ScoreChanged), imperative for commands (RequestAttack). | Consistent vocabulary reduces ambiguity. |
+
+---
+
+## 3. Memory & GC Discipline
+
+| # | Rule | Rationale |
+|---|------|-----------|
+| 3.1 | *Zero heap allocations in Update(), FixedUpdate(), LateUpdate().* No new (reference types), no string concatenation, no LINQ, no boxing, no closure captures. | GC spikes cause visible frame hitches on mobile. |
+| 3.2 | *No LINQ in any per-frame code path.* Use explicit for/foreach with pre-allocated collections. | LINQ allocates iterators, closures, and intermediate collections. |
+| 3.3 | *No string concatenation in hot paths.* Use StringBuilder or update cached strings only when the underlying value changes. | Each + on strings allocates a new char[] on the heap. |
+| 3.4 | *Object pooling is mandatory* for any object instantiated and destroyed more than once per gameplay session — enemies, projectiles, VFX, UI popups, damage numbers. | Instantiate/Destroy are among Unity's most expensive operations. |
+| 3.5 | *All pooled objects must implement IPoolable* with OnGetFromPool(), OnReturnToPool(), and ResetState(). | Guarantees clean state on reuse; prevents stale-data bugs. |
+| 3.6 | *No Instantiate() or Destroy() during active gameplay.* Only permitted during loading screens, scene transitions, or one-time setup. | Prevents GC spikes and frame drops mid-game. |
+| 3.7 | *Pools must be pre-warmed* during scene load. Lazy pool expansion during gameplay is rejected unless the pre-warm count is documented and justified. | Avoids allocation spikes when the first wave spawns. |
+| 3.8 | *Dictionary<TEnum, T> must use a custom IEqualityComparer<TEnum>* to avoid boxing the enum key on every lookup. | Enum boxing is invisible in code but generates garbage every frame. |
+| 3.9 | *Cache all WaitForSeconds / WaitForEndOfFrame instances* if coroutines are ever used (prefer UniTask). | Each new WaitForSeconds() is a heap allocation. |
+
+---
+
+## 4. Async & Concurrency
+
+| # | Rule | Rationale |
+|---|------|-----------|
+| 4.1 | *Zero coroutines.* No IEnumerator, no yield return, no StartCoroutine(). All async work via UniTask. | UniTask is allocation-free and supports proper cancellation. |
+| 4.2 | *Every async method must accept and propagate CancellationToken.* | Prevents orphaned tasks when objects are destroyed or scenes unload. |
+| 4.3 | *Fire-and-forget must use .Forget(exceptionHandler).* Bare .Forget() without an exception handler is rejected. | Silent exception swallowing hides bugs. |
+| 4.4 | *Async entry points implement IAsyncStartable*, not async void Start(). | VContainer lifecycle integration; proper error handling and ordering. |
+| 4.5 | *All external async operations wrapped in try-catch* — Addressables loading, network calls, file I/O. | Unhandled async exceptions crash silently or unpredictably. |
+| 4.6 | *No async void.* Use async UniTask or async UniTaskVoid. | async void exceptions cannot be caught by callers. |
+
+---
+
+## 5. Performance (Mobile-Specific)
+
+| # | Rule | Rationale |
+|---|------|-----------|
+| 5.1 | *No GameObject.Find(), FindObjectOfType(), or FindObjectsOfType() anywhere.* Blocking rejection. | O(n) scene traversal; fragile string/type dependencies. |
+| 5.2 | *No GetComponent<T>() in Update, FixedUpdate, or any per-frame method.* Cache references in Awake() or receive via injection. | GetComponent has non-trivial overhead per call. |
+| 5.3 | *Use Physics.OverlapSphereNonAlloc* (and all other NonAlloc Physics API variants). Never use allocating Physics queries. | Allocating variants create a new array every call. |
+| 5.4 | *Use sqrMagnitude for distance comparisons*, not Vector3.Distance() or .magnitude. | Avoids the cost of sqrt every comparison. |
+| 5.5 | *Use MaterialPropertyBlock for per-instance material changes.* renderer.material is forbidden (it clones the material and leaks memory). | Material cloning breaks batching and leaks until scene unload. |
+| 5.6 | *Animator parameters accessed via hashed IDs* — Animator.StringToHash() cached in static readonly int fields. No raw strings in SetFloat, SetBool, SetTrigger. | String-based lookups allocate and are slower. |
+| 5.7 | *No Debug.Log in per-frame code in release builds.* Wrap with #if UNITY_EDITOR or [Conditional("UNITY_EDITOR")]. | Logging allocates strings and triggers IO even in release. |
+| 5.8 | *Frame budget: leave ~35% idle time.* At 30fps (33ms budget), stay under 22ms. At 60fps (16.6ms budget), stay under 11ms. | Mobile chips thermally throttle; sustained load degrades performance over time. |
+| 5.9 | *No hard-coded layer indices or tag strings.* Use LayerMask serialized fields, constants, or nameof(). | Magic numbers are fragile and break silently when layers/tags change. |
+| 5.10 | *Texture import settings reviewed:* compression format appropriate for platform (ASTC/ETC2), Read/Write disabled unless CPU access is needed, reasonable Max Size. | Read/Write doubles texture memory; wrong compression wastes VRAM. |
+
+---
+
+## 6. Data Architecture (ScriptableObjects)
+
+| # | Rule | Rationale |
+|---|------|-----------|
+| 6.1 | *All tunable game data lives in ScriptableObjects* — enemy stats, weapon configs, wave definitions, spawn settings, difficulty curves. | Separates data from logic; enables designer iteration without code changes. |
+| 6.2 | *[CreateAssetMenu] attribute on all data SOs.* | Designers can create new data assets from the Project window. |
+| 6.3 | *OnValidate() implemented on all data SOs* — with range clamping and Debug.LogError for invalid values. | Catches data errors at author time, not at runtime. |
+| 6.4 | *Runtime Validate() method on data SOs* — called during game initialization. Fail-fast with clear error messages. | Catches data issues missed by OnValidate (e.g. null Addressable refs). |
+| 6.5 | *No hard-coded gameplay values in scripts.* If a designer might want to change it, it belongs in a ScriptableObject. | Enables rapid tuning without recompilation. |
+| 6.6 | *Addressable references (AssetReference) for prefabs and assets.* No direct prefab references dragged into non-SO MonoBehaviour fields. | Addressables enable async loading, memory management, and remote delivery. |
+
+---
+
+## 7. State Machine
+
+| # | Rule | Rationale |
+|---|------|-----------|
+| 7.1 | *States must not reference concrete controller types.* They receive a context interface (IPlayerStateContext, IEnemyStateContext). | Limits coupling; states only depend on what they need. |
+| 7.2 | *Terminal states (Die) must not transition to other states.* Enforce this in the state machine or the state's OnUpdate. | Prevents zombie objects that continue acting after death. |
+| 7.3 | *Each state class in its own file.* Filename matches class name. | Keeps files small and discoverable. |
+| 7.4 | *State classes are internal sealed* unless inheritance is explicitly needed and documented. | Prevents unintended extension of state behavior. |
+| 7.5 | *No state-specific logic in the controller.* Controllers call StateMachine.Update(); all branching lives inside state classes. | Single source of truth for behavior per state. |
+
+---
+
+## 8. Error Handling & Null Safety
+
+| # | Rule | Rationale |
+|---|------|-----------|
+| 8.1 | *Fail-fast on missing mandatory dependencies.* Throw NullReferenceException or InvalidOperationException in constructors / [Inject] methods. Do not silently continue. | Silent nulls propagate into hard-to-diagnose bugs later. |
+| 8.2 | *No defensive ?. on dependencies that must exist.* Null-conditional is for genuinely optional references only. | ?. on mandatory dependencies masks configuration errors. |
+| 8.3 | *[SerializeField] fields validated in Awake().* If null, log an error and enabled = false. | Catches missing inspector assignments immediately. |
+| 8.4 | *Addressables loads wrapped in try-catch* with explicit error handling (log + fallback or disable). | Network/disk failures must not crash the game. |
+| 8.5 | *All IDisposable objects disposed* — subscriptions, async handles, Addressables operation handles. | Prevents memory leaks and dangling callbacks. |
+
+---
+
+## 9. Code Style & Conventions
+
+| # | Rule | Rationale |
+|---|------|-----------|
+| 9.1 | *Namespace:* MadboxTest root. Sub-namespaces by feature area (e.g. MadboxTest.Combat, MadboxTest.UI). | Prevents name collisions; organizes IntelliSense. |
+| 9.2 | *Private fields:* _camelCase with underscore prefix. | Distinguishes fields from locals and parameters at a glance. |
+| 9.3 | *Public properties:* PascalCase. Prefer read-only ({ get; private set; } or { get; }). | Encapsulation; prevents external mutation. |
+| 9.4 | *Explicit access modifiers* on all types, methods, and fields. No implicit private. | Makes intent clear; prevents accidental exposure. |
+| 9.5 | *Braces {} required* on all if / for / foreach / while. Exception: single-line early return / continue / break. | Prevents bugs from adding a second line to a braceless block. |
+| 9.6 | *One class per file.* Filename matches class name exactly (PlayerController.cs → class PlayerController). | Makes files discoverable by name. |
+| 9.7 | *XML documentation (///) on all public APIs.* | Enables IntelliSense tooltips and generated docs. |
+| 9.8 | *No magic numbers.* Use const or static readonly with descriptive names. | Self-documenting code; single place to change values. |
+| 9.9 | *No commented-out code.* Dead code must be deleted, not commented. Use version control to recover old code. | Commented-out code rots, confuses readers, and is never re-enabled. |
+
+---
+
+## 10. PR Process
+
+| # | Rule | Rationale |
+|---|------|-----------|
+| 10.1 | *Every PR must state which ticket(s) it addresses* in the description — format: MB-XXX. | Traceability between code and requirements. |
+| 10.2 | *No PR may mix feature work with refactoring.* Separate PRs. | Keeps diffs reviewable and rollbacks safe. |
+| 10.3 | *Reviewer must pull and run on a target device* for any gameplay-affecting change. Editor-only testing is insufficient. | Editor performance and behavior differ significantly from mobile. |
+| 10.4 | *Profiler screenshot required* for new systems or changes to Update-loop code — showing zero per-frame GC allocations. | Proves compliance with §3.1 with evidence, not trust. |
+| 10.5 | *Any new MonoBehaviour must justify in the PR description why it cannot be a pure C# class.* | Keeps the MonoBehaviour count minimal; most logic should be injectable C#. |
+| 10.6 | *Any new singleton is an automatic rejection.* Must use VContainer DI. | Enforces §1.4 at the process level. |
+| 10.7 | *Breaking an established pattern requires explicit team discussion*, documented in the PR description with rationale and alternatives considered. | Prevents architectural drift from ad-hoc decisions. |
+| 10.8 | *All review feedback must cite a specific rule number* from this document (e.g. "Violates §3.1: zero heap allocations in Update"). | Makes reviews objective, consistent, and actionable. |
+
+---
+
+## Quick Reference — Common Rejections
+
+| Violation | Rule | Fix |
+|-----------|------|-----|
+| public static Instance | §1.4 | Register in VContainer, inject via interface |
+| FindObjectOfType<T>() | §5.1 | Inject dependency via VContainer |
+| GetComponent<T>() in Update | §5.2 | Cache in Awake() or [Inject] |
+| renderer.material.color = x | §5.5 | Use MaterialPropertyBlock |
+| StartCoroutine(...) | §4.1 | Convert to async UniTask with CancellationToken |
+| new WaitForSeconds(x) in loop | §3.9 | Cache as static readonly field |
+| Instantiate() during gameplay | §3.6 | Use ObjectPoolService |
+| String concat in Update | §3.1 | Cache string, rebuild only on change |
+| Debug.Log in Update | §5.7 | Wrap with #if UNITY_EDITOR |
+| LINQ in per-frame code | §3.2 | Replace with explicit loop |
+| async void method | §4.6 | Use async UniTask or async UniTaskVoid |
+| Bare .Forget() | §4.3 | Add exception handler: .Forget(e => Debug.LogException(e)) |
+| Mutable signal class | §2.2 | Convert to readonly struct with readonly fields |
+| Hard-coded layer 7 | §5.9 | Use serialized LayerMask or named constant |
+
+This methods can you be careful about it so that we don't have that kind of massive change afterwards

@@ -27,6 +27,10 @@ namespace OrcFarm.Farming
         [FormerlySerializedAs("CareWindowDuration")]
         [SerializeField] private float _careWindowDuration = 15f;
 
+        [Tooltip("Seconds the 'Planted' confirmation state is shown before growth begins.")]
+        [Min(0.1f)]
+        [SerializeField] private float _plantedConfirmationDuration = 1.5f;
+
         /// <summary>Total seconds for the crop to fully grow after planting.</summary>
         public float GrowthDuration => _growthDuration;
 
@@ -36,14 +40,18 @@ namespace OrcFarm.Farming
         /// <summary>Seconds the player has to respond before the crop fails.</summary>
         public float CareWindowDuration => _careWindowDuration;
 
+        /// <summary>Seconds the 'Planted' confirmation state is shown before growth begins.</summary>
+        public float PlantedConfirmationDuration => _plantedConfirmationDuration;
+
         /// <summary>Absolute seconds-after-planting when the care window opens.</summary>
         public float CareCheckpointTime => _growthDuration * _careCheckpointFraction;
 
         private void OnValidate()
         {
-            _growthDuration         = Mathf.Max(1f, _growthDuration);
-            _careCheckpointFraction = Mathf.Clamp(_careCheckpointFraction, 0.1f, 0.9f);
-            _careWindowDuration     = Mathf.Max(1f, _careWindowDuration);
+            _growthDuration                = Mathf.Max(1f, _growthDuration);
+            _careCheckpointFraction        = Mathf.Clamp(_careCheckpointFraction, 0.1f, 0.9f);
+            _careWindowDuration            = Mathf.Max(1f, _careWindowDuration);
+            _plantedConfirmationDuration   = Mathf.Max(0.1f, _plantedConfirmationDuration);
 
             // Guard: enough time must remain after care to complete growth
             float remainingAfterCare = _growthDuration * (1f - _careCheckpointFraction);
