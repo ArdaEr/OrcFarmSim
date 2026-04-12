@@ -28,6 +28,12 @@ namespace OrcFarm.Farming
         [Tooltip("Metres above the plot origin where the harvested head spawns.")]
         [SerializeField] private float _harvestSpawnHeight = 0.8f;
 
+        [Tooltip("Horizontal distance from the plot centre where the harvested head spawns. " +
+                 "Must be larger than the plot's collider radius so the head lands outside " +
+                 "the plot footprint and always enters the InteractionDetector sphere from outside.")]
+        [Min(0.1f)]
+        [SerializeField] private float _harvestSpawnRadius = 1.5f;
+
         private IPlayerInventory               _inventory;
         private IPublisher<CropHarvestedSignal> _harvestPublisher;
         private FarmPlotStateMachine            _stateMachine;
@@ -110,7 +116,11 @@ namespace OrcFarm.Farming
         /// <inheritdoc/>
         public void SpawnHarvestedHead()
         {
-            Vector3 spawnPosition = transform.position + Vector3.up * _harvestSpawnHeight;
+            // Random direction on the XZ plane — normalized so the head always lands
+            // exactly _harvestSpawnRadius units from the plot centre in world space.
+            Vector2 circle = Random.insideUnitCircle.normalized;
+            Vector3 offset = new Vector3(circle.x, 0f, circle.y) * _harvestSpawnRadius;
+            Vector3 spawnPosition = transform.position + offset + Vector3.up * _harvestSpawnHeight;
             _harvestPublisher.Publish(new CropHarvestedSignal(spawnPosition)); // (§2.1)
         }
 

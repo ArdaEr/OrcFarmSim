@@ -4,10 +4,12 @@ using UnityEngine;
 namespace OrcFarm.Workers
 {
     /// <summary>
-    /// An assembled orc kept as a hauler worker.
+    /// An assembled orc that can be Kept as a hauler worker or Stored in the holding pen.
     ///
-    /// Loop: scan for an available harvested head → walk to it → carry it to the storage
-    /// drop-off point → walk back to the wait point → repeat.
+    /// Keep flow:   Keep() → WalkingToWaitPoint → Idle → (head search loop)
+    /// Store flow:  StoreInPen() → WalkingToPen → StoredInPen → (player Keeps from pen)
+    ///
+    /// Hauler loop: Idle → MovingToHead → Carrying → Returning → Idle
     ///
     /// Instability: every <see cref="_instabilityCheckInterval"/> seconds the hauler rolls
     /// a chance to slow down for a random duration, producing a visible movement stutter
@@ -80,12 +82,21 @@ namespace OrcFarm.Workers
 
         // ── State ──────────────────────────────────────────────────────────────
 
-        private enum HaulerState { Idle, MovingToHead, Carrying, Returning }
+        private enum HaulerState
+        {
+            Idle,
+            MovingToHead,
+            Carrying,
+            Returning,
+            WalkingToWaitPoint, // after Keep: orc walks to wait point before searching
+            WalkingToPen,       // after Store: orc walks to assigned pen standing spot
+            StoredInPen,        // orc stands in pen; player can Keep it from here
+        }
 
         private HaulerState   _state;
         private HarvestedHead _targetHead;
-        private Rigidbody     _targetRb;     // cached at grab time, not at search time
-        private Collider      _targetCol;    // cached at search time; used to detect player steal
+        private Rigidbody     _targetRb;   // cached at grab time, not at search time
+        private Collider      _targetCol;  // cached at search time; used to detect player steal
 
         // ── Timers ─────────────────────────────────────────────────────────────
 
@@ -95,7 +106,10 @@ namespace OrcFarm.Workers
         private bool  _isSlowed;
 
         // Pre-allocated to avoid per-search allocation (§5.3).
-        private readonly Collider[] _overlapBuffer = new Collider[16];
+        // Size 64 ensures the buffer is never filled by scene geometry when the search
+        // radius covers the full farm area. If OverlapSphereNonAlloc ever returns exactly
+        // 64, increase this — silent truncation is the only failure mode.
+        private readonly Collider[] _overlapBuffer = new Collider[64];
 
         // Cached to avoid sqrt in arrival checks every frame (§5.4).
         private float _sqArrival;
@@ -105,32 +119,61 @@ namespace OrcFarm.Workers
         /// <summary>True once the player has chosen Keep for this worker.</summary>
         public bool IsKept { get; private set; }
 
+        /// <summary>True while the orc is walking to or standing in the holding pen.</summary>
+        public bool IsStored { get; private set; }
+
+        /// <summary>True specifically when the orc has arrived and is standing in the pen.</summary>
+        public bool IsInPen => IsStored && _state == HaulerState.StoredInPen;
+
+        /// <summary>The standing spot assigned by <see cref="OrcHoldingPen"/>.</summary>
+        public Transform PenSpot { get; private set; }
+
         /// <summary>
         /// Called by <see cref="KeepInteractable"/> when the player chooses Keep.
-        /// Activates this GameObject and starts the hauler loop.
-        /// Safe to call on an inactive GameObject — Unity allows method calls on
-        /// inactive components; SetActive then triggers the normal lifecycle.
+        /// Orc walks to the wait point first, then begins the hauler idle loop.
         /// </summary>
         public void Keep()
         {
-            IsKept = true;
-            _state = HaulerState.Idle;
+            IsKept   = true;
+            IsStored = false;
+            PenSpot  = null;
+            _state   = HaulerState.WalkingToWaitPoint;
             gameObject.SetActive(true);
+        }
+
+        /// <summary>
+        /// Called by <see cref="OrcHoldingPen"/> when the player chooses Store.
+        /// Orc walks to <paramref name="spot"/> and stands there until Kept.
+        /// </summary>
+        public void StoreInPen(Transform spot)
+        {
+            IsStored = true;
+            PenSpot  = spot;
+            _state   = HaulerState.WalkingToPen;
+            gameObject.SetActive(true);
+        }
+
+        // ── Setup ──────────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Provides the three scene-side references that cannot be pre-assigned on a
+        /// prefab. Must be called by the spawner (e.g. AssemblyStation) immediately
+        /// after Instantiate, before Keep() or StoreInPen() are ever called.
+        /// </summary>
+        public void Initialize(
+            Transform waitPoint,
+            Transform storageWalkTarget,
+            Transform storageDeliveryRoot)
+        {
+            _waitPoint          = waitPoint;
+            _storageWalkTarget  = storageWalkTarget;
+            _storageDeliveryRoot = storageDeliveryRoot;
         }
 
         // ── Unity lifecycle ────────────────────────────────────────────────────
 
         private void Awake()
         {
-            if (_waitPoint == null)
-                throw new System.InvalidOperationException(
-                    $"[HaulerWorker '{gameObject.name}'] _waitPoint not assigned.");
-            if (_storageWalkTarget == null)
-                throw new System.InvalidOperationException(
-                    $"[HaulerWorker '{gameObject.name}'] _storageWalkTarget not assigned.");
-            if (_storageDeliveryRoot == null)
-                throw new System.InvalidOperationException(
-                    $"[HaulerWorker '{gameObject.name}'] _storageDeliveryRoot not assigned.");
             if (_carryAnchor == null)
                 throw new System.InvalidOperationException(
                     $"[HaulerWorker '{gameObject.name}'] _carryAnchor not assigned.");
@@ -138,11 +181,32 @@ namespace OrcFarm.Workers
             _sqArrival = _arrivalDistance * _arrivalDistance;
         }
 
+        private void Start()
+        {
+            // Scene-side refs are injected via Initialize() when spawned from a prefab.
+            // Validate here so the error surfaces before the first Keep/Store call.
+            if (_waitPoint == null)
+                throw new System.InvalidOperationException(
+                    $"[HaulerWorker '{gameObject.name}'] _waitPoint not assigned. " +
+                    "Call Initialize() after Instantiate().");
+            if (_storageWalkTarget == null)
+                throw new System.InvalidOperationException(
+                    $"[HaulerWorker '{gameObject.name}'] _storageWalkTarget not assigned. " +
+                    "Call Initialize() after Instantiate().");
+            if (_storageDeliveryRoot == null)
+                throw new System.InvalidOperationException(
+                    $"[HaulerWorker '{gameObject.name}'] _storageDeliveryRoot not assigned. " +
+                    "Call Initialize() after Instantiate().");
+        }
+
         // Zero heap allocations: all arithmetic uses value types; OverlapSphereNonAlloc
         // uses a pre-allocated buffer; Random returns floats (§3.1).
         private void Update()
         {
-            TickInstability();
+            // Do nothing until the player has chosen Keep or Store.
+            if (!IsKept && !IsStored) return;
+
+            if (IsKept) TickInstability(); // instability only applies to active haulers
             TickState();
         }
 
@@ -179,10 +243,13 @@ namespace OrcFarm.Workers
         {
             switch (_state)
             {
-                case HaulerState.Idle:          TickIdle();          break;
-                case HaulerState.MovingToHead:  TickMovingToHead();  break;
-                case HaulerState.Carrying:      TickCarrying();      break;
-                case HaulerState.Returning:     TickReturning();     break;
+                case HaulerState.Idle:               TickIdle();               break;
+                case HaulerState.MovingToHead:       TickMovingToHead();       break;
+                case HaulerState.Carrying:           TickCarrying();           break;
+                case HaulerState.Returning:          TickReturning();          break;
+                case HaulerState.WalkingToWaitPoint: TickWalkingToWaitPoint(); break;
+                case HaulerState.WalkingToPen:       TickWalkingToPen();       break;
+                case HaulerState.StoredInPen:                                  break;
             }
         }
 
@@ -202,7 +269,7 @@ namespace OrcFarm.Workers
             if (_targetHead == null || !_targetHead.gameObject.activeInHierarchy)
             {
                 ClearTarget();
-                _state = HaulerState.Idle;
+                _state = HaulerState.Returning;
                 return;
             }
 
@@ -210,7 +277,7 @@ namespace OrcFarm.Workers
             if (_targetCol != null && !_targetCol.enabled)
             {
                 ClearTarget();
-                _state = HaulerState.Idle;
+                _state = HaulerState.Returning;
                 return;
             }
 
@@ -236,6 +303,22 @@ namespace OrcFarm.Workers
                 _state = HaulerState.Idle;
         }
 
+        private void TickWalkingToWaitPoint()
+        {
+            MoveToward(_waitPoint.position);
+
+            if (SqDistTo(_waitPoint.position) <= _sqArrival)
+                _state = HaulerState.Idle;
+        }
+
+        private void TickWalkingToPen()
+        {
+            MoveToward(PenSpot.position);
+
+            if (SqDistTo(PenSpot.position) <= _sqArrival)
+                _state = HaulerState.StoredInPen;
+        }
+
         // ── Head interactions ──────────────────────────────────────────────────
 
         // OverlapSphereNonAlloc only returns enabled colliders, so stored heads
@@ -244,12 +327,10 @@ namespace OrcFarm.Workers
         // automatically — no extra filtering needed (§5.3).
         private void FindAndTargetHead()
         {
-            Debug.Log("[HaulerWorker] FindAndTargetHead called");
-
             int count = Physics.OverlapSphereNonAlloc(
                 transform.position, _searchRadius, _overlapBuffer);
 
-            HarvestedHead best   = null;
+            HarvestedHead best    = null;
             Collider      bestCol = null;
             float         bestSq  = float.MaxValue;
 
@@ -258,7 +339,7 @@ namespace OrcFarm.Workers
                 if (!_overlapBuffer[i].TryGetComponent(out HarvestedHead head))
                     continue;
 
-                float sq = SqDistTo(head.transform.position);   // sqrMagnitude (§5.4)
+                float sq = SqDistTo(head.transform.position); // sqrMagnitude (§5.4)
                 if (sq < bestSq)
                 {
                     bestSq  = sq;
@@ -286,12 +367,19 @@ namespace OrcFarm.Workers
             // with a head the hauler is carrying.
             if (_targetCol != null)
                 _targetCol.enabled = false;
+            else
+                Debug.LogWarning("[HaulerWorker] _targetCol is NULL in GrabHead()", this);
 
             if (_targetRb != null)
             {
                 _targetRb.linearVelocity  = Vector3.zero;
                 _targetRb.angularVelocity = Vector3.zero;
                 _targetRb.isKinematic     = true;
+            }
+            else
+            {
+                Debug.LogWarning(
+                    "[HaulerWorker] _targetRb is NULL in GrabHead() — no Rigidbody on head.", this);
             }
 
             _targetHead.transform.SetParent(_carryAnchor);
@@ -337,8 +425,15 @@ namespace OrcFarm.Workers
                 transform.rotation = Quaternion.LookRotation(dir);
         }
 
-        private float SqDistTo(Vector3 target) =>
-            (transform.position - target).sqrMagnitude;
+        // XZ-only to match MoveToward which also flattens to the orc's Y.
+        // Using 3D distance caused arrival to never trigger when the target
+        // transform's Y differed from the orc's Y by more than _arrivalDistance.
+        private float SqDistTo(Vector3 target)
+        {
+            float dx = transform.position.x - target.x;
+            float dz = transform.position.z - target.z;
+            return dx * dx + dz * dz;
+        }
 
         // ── Logging ────────────────────────────────────────────────────────────
 

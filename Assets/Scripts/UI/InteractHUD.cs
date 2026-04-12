@@ -6,6 +6,7 @@ using OrcFarm.Storage;
 using OrcFarm.Workers;
 using TMPro;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using VContainer;
 
 namespace OrcFarm.UI
@@ -56,6 +57,7 @@ namespace OrcFarm.UI
         private int           _lastFertilizerCount = -1;
         private PlotState     _lastPlotState       = (PlotState)(-1);  // used by UpdatePrompt
         private PlotState     _lastPlotStatusState = (PlotState)(-1);  // used by UpdatePlotStatus
+        private bool          _lastCanSecondary;                        // tracks Q prompt visibility
         private bool          _loggedMissingInjection;
 
         // ── VContainer injection ───────────────────────────────────────────────
@@ -105,6 +107,7 @@ namespace OrcFarm.UI
             }
 
             UpdatePrompt();
+            UpdateSecondaryInput();
             UpdateStatus();
             UpdateInventory();
             UpdatePlotStatus();
@@ -114,14 +117,16 @@ namespace OrcFarm.UI
 
         private void UpdatePrompt()
         {
-            IInteractable target = _interactionService.CurrentTarget;
+            IInteractable target         = _interactionService.CurrentTarget;
+            bool          plotChanged    = target is FarmPlot fp && fp.State != _lastPlotState;
+            bool          canSecondary   = target is ISecondaryInteractable s && s.CanSecondaryInteract;
+            bool          secondaryChanged = canSecondary != _lastCanSecondary;
 
-            bool plotStateChanged = target is FarmPlot fp && fp.State != _lastPlotState;
-
-            if (target == _lastTarget && !plotStateChanged)
+            if (target == _lastTarget && !plotChanged && !secondaryChanged)
                 return;
 
-            _lastTarget = target;
+            _lastTarget       = target;
+            _lastCanSecondary = canSecondary;
             if (target is FarmPlot fp2)
                 _lastPlotState = fp2.State;
 
@@ -132,6 +137,17 @@ namespace OrcFarm.UI
             }
 
             _promptText.text = BuildPromptText(target);
+        }
+
+        // Routes Q key press to the current target's secondary action.
+        private void UpdateSecondaryInput()
+        {
+            if (!(Keyboard.current?.qKey.wasPressedThisFrame ?? false))
+                return;
+
+            IInteractable target = _interactionService.CurrentTarget;
+            if (target is ISecondaryInteractable sec && sec.CanSecondaryInteract)
+                sec.OnSecondaryInteract();
         }
 
         private string BuildPromptText(IInteractable target)
@@ -147,8 +163,13 @@ namespace OrcFarm.UI
                     ? "E:  Store head"
                     : "E:  Retrieve head  (" + storage.StoredCount + ")";
 
-            if (target is KeepInteractable)
-                return "E:  Keep orc";
+            if (target is KeepInteractable ki)
+            {
+                string prompt = "E:  Keep orc";
+                if (ki is ISecondaryInteractable sec && sec.CanSecondaryInteract)
+                    prompt += "\nQ:  Store for sale";
+                return prompt;
+            }
 
             return "E:  Interact";
         }

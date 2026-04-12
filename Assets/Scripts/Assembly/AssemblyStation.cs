@@ -1,6 +1,7 @@
 using System.Collections;
 using OrcFarm.Carry;
 using OrcFarm.Interaction;
+using OrcFarm.Workers;
 using TMPro;
 using UnityEngine;
 
@@ -35,9 +36,26 @@ namespace OrcFarm.Assembly
                  "Defaults to 1.5 m in front of the station if unassigned.")]
         [SerializeField] private Transform _orcSpawnPoint;
 
-        [Tooltip("Optional. Pre-placed disabled AssembledOrc instance. " +
-                 "Repositioned and activated on each successful assembly.")]
-        [SerializeField] private AssembledOrc _orcInstance;
+        [Header("Orc worker routes  —  injected into each spawned HaulerWorker")]
+        [Tooltip("The wait point Transform the hauler returns to when idle. " +
+                 "Assign the same WaitPoint object used by your existing scene orcs.")]
+        [SerializeField] private Transform _orcWaitPoint;
+
+        [Tooltip("Walk target in front of the storage building. " +
+                 "Assign the same StorageWalkTarget object used by your existing scene orcs.")]
+        [SerializeField] private Transform _orcStorageWalkTarget;
+
+        [Tooltip("ContentsRoot child of HeadStorageContainer where delivered heads are parented. " +
+                 "Assign the same StorageDeliveryRoot object used by your existing scene orcs.")]
+        [SerializeField] private Transform _orcStorageDeliveryRoot;
+
+        [Tooltip("The orc holding pen. Injected into each spawned orc's KeepInteractable " +
+                 "so the player can Store assembled orcs. Assign the OrcHoldingPen scene object.")]
+        [SerializeField] private OrcHoldingPen _orcPen;
+
+        [Tooltip("AssembledOrc prefab to instantiate on each successful assembly. " +
+                 "Assign the AssembledOrc prefab from the Project window.")]
+        [SerializeField] private AssembledOrc _orcPrefab;
 
         [Tooltip("Optional. TMP text that shows the assembly result summary. " +
                  "Can be on a world-space Canvas child or a screen-space HUD Canvas.")]
@@ -127,14 +145,23 @@ namespace OrcFarm.Assembly
 
         private void ShowOrcResult()
         {
-            if (_orcInstance == null)
+            if (_orcPrefab == null)
                 return;
 
-            _orcInstance.transform.position = _orcSpawnPoint != null
+            Vector3 spawnPos = _orcSpawnPoint != null
                 ? _orcSpawnPoint.position
                 : transform.position + transform.forward * 1.5f;
 
-            _orcInstance.gameObject.SetActive(true);
+            AssembledOrc orc = Instantiate(_orcPrefab, spawnPos, _orcPrefab.transform.rotation);
+
+            // Inject scene-side references that cannot be pre-assigned on a prefab.
+            if (orc.TryGetComponent(out HaulerWorker hauler))
+                hauler.Initialize(_orcWaitPoint, _orcStorageWalkTarget, _orcStorageDeliveryRoot);
+
+            if (orc.TryGetComponent(out KeepInteractable keep))
+                keep.Initialize(_orcPen);
+
+            orc.gameObject.SetActive(true);
         }
 
         private void ShowResultText()

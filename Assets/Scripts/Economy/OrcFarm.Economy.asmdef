@@ -1,10 +1,10 @@
 {
-    "name": "OrcFarm.Assembly",
-    "rootNamespace": "OrcFarm.Assembly",
+    "name": "OrcFarm.Economy",
+    "rootNamespace": "OrcFarm.Economy",
     "references": [
         "OrcFarm.Interaction",
-        "OrcFarm.Carry",
         "OrcFarm.Workers",
+        "OrcFarm.Assembly",
         "Unity.TextMeshPro"
     ],
     "includePlatforms": [],

@@ -11,6 +11,7 @@
         "OrcFarm.Storage",
         "OrcFarm.Workers",
         "Unity.TextMeshPro",
+        "Unity.InputSystem",
         "VContainer"
     ],
     "includePlatforms": [],
