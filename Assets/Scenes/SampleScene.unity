@@ -260,7 +260,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6dfbbda637431db45891d0f98b072244, type: 3}
   m_Name: 
   m_EditorClassIdentifier: OrcFarm.Farming::OrcFarm.Farming.HarvestedLegPool
-  _legPrefab: {fileID: 7553169200623843085, guid: 4948b0e77b201dc42918dc2a43c79cce, type: 3}
+  _legPrefab: {fileID: 335260642768457950, guid: 0c675cf341b7893459da09ade4df0719, type: 3}
   _initialCapacity: 5
 --- !u!4 &79487459
 Transform:
@@ -3509,8 +3509,12 @@ MonoBehaviour:
   _config: {fileID: 11400000, guid: bcab60b8d2a9bd343885664c8fd45519, type: 2}
   _startingSeeds: 2
   _startingFertilizer: 2
+  _startingLegFry: 2
+  _startingFeedItem: 2
   _debugAddSeeds: 1
   _debugAddFertilizer: 1
+  _debugAddLegFry: 5
+  _debugAddFeedItem: 5
   _applyDebugRefill: 0
 --- !u!114 &730719953
 MonoBehaviour:
@@ -4191,76 +4195,6 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 906363238}
   m_Mesh: {fileID: 10209, guid: 0000000000000000e000000000000000, type: 0}
---- !u!1 &930844435
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 930844438}
-  - component: {fileID: 930844437}
-  - component: {fileID: 930844436}
-  m_Layer: 0
-  m_Name: LegPond
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &930844436
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 930844435}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0fa8e2cfc9e87784695decbc75db0604, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: OrcFarm.Farming::OrcFarm.Farming.LegPond
-  _config: {fileID: 11400000, guid: 898de0082a33cc141afc05befb3e75eb, type: 2}
-  _legPool: {fileID: 79487458}
-  _debugForceNeedsCare: 0
-  _debugForceReadyToHarvest: 0
---- !u!65 &930844437
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 930844435}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 1
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 1, y: 1, z: 1}
-  m_Center: {x: 0, y: 0, z: 0}
---- !u!4 &930844438
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 930844435}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 6.07, y: 0.557, z: 18.57}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1081626942
 GameObject:
   m_ObjectHideFlags: 0
@@ -5936,6 +5870,7 @@ GameObject:
   - component: {fileID: 1675993829}
   - component: {fileID: 1675993828}
   - component: {fileID: 1675993827}
+  - component: {fileID: 1675993831}
   m_Layer: 0
   m_Name: LegPond
   m_TagString: Untagged
@@ -6037,6 +5972,24 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1675993831
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1675993826}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0fa8e2cfc9e87784695decbc75db0604, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: OrcFarm.Farming::OrcFarm.Farming.LegPond
+  _config: {fileID: 11400000, guid: 898de0082a33cc141afc05befb3e75eb, type: 2}
+  _legPool: {fileID: 79487458}
+  _resultText: {fileID: 722980011}
+  _readoutClearDelay: 3
+  _debugForceNeedsCare: 0
+  _debugForceReadyToHarvest: 0
 --- !u!1 &1708037048
 GameObject:
   m_ObjectHideFlags: 0
@@ -6563,6 +6516,5 @@ SceneRoots:
   - {fileID: 1708037050}
   - {fileID: 665619269}
   - {fileID: 219505461}
-  - {fileID: 930844438}
   - {fileID: 79487459}
   - {fileID: 1675993830}
