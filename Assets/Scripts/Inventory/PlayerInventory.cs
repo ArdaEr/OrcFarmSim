@@ -32,6 +32,12 @@ namespace OrcFarm.Inventory
         [Tooltip("Number of Fertilizer items added to inventory at start.")]
         [SerializeField] private int _startingFertilizer = 5;
 
+        [Tooltip("Number of LegFry added to inventory at start.")]
+        [SerializeField] private int _startingLegFry = 3;
+
+        [Tooltip("Number of FeedItems added to inventory at start.")]
+        [SerializeField] private int _startingFeedItem = 5;
+
         // ── Debug refill (Play Mode only) ─────────────────────────────────────
 
         [Header("Debug Refill  —  Play Mode only")]
@@ -40,6 +46,12 @@ namespace OrcFarm.Inventory
 
         [Tooltip("Fertilizer to add when the refill is triggered.")]
         [SerializeField] private int _debugAddFertilizer = 5;
+
+        [Tooltip("LegFry to add when the refill is triggered.")]
+        [SerializeField] private int _debugAddLegFry = 5;
+
+        [Tooltip("FeedItems to add when the refill is triggered.")]
+        [SerializeField] private int _debugAddFeedItem = 5;
 
         [Tooltip("Tick this during Play Mode to immediately add the amounts above to the " +
                  "runtime inventory. The checkbox resets itself after one use.")]
@@ -68,6 +80,12 @@ namespace OrcFarm.Inventory
 
             if (_startingFertilizer > 0)
                 _inventory.TryAdd(ItemType.Fertilizer, _startingFertilizer);
+
+            if (_startingLegFry > 0)
+                _inventory.TryAdd(ItemType.LegFry, _startingLegFry);
+
+            if (_startingFeedItem > 0)
+                _inventory.TryAdd(ItemType.FeedItem, _startingFeedItem);
         }
 
 #if UNITY_EDITOR
@@ -82,12 +100,19 @@ namespace OrcFarm.Inventory
                 _inventory.TryAdd(ItemType.HeadSeed, _debugAddSeeds);
             if (_debugAddFertilizer > 0)
                 _inventory.TryAdd(ItemType.Fertilizer, _debugAddFertilizer);
+            if (_debugAddLegFry > 0)
+                _inventory.TryAdd(ItemType.LegFry, _debugAddLegFry);
+            if (_debugAddFeedItem > 0)
+                _inventory.TryAdd(ItemType.FeedItem, _debugAddFeedItem);
 
             Debug.Log(
-                $"[PlayerInventory] Debug refill applied: +{_debugAddSeeds} HeadSeed, " +
-                $"+{_debugAddFertilizer} Fertilizer.  " +
+                $"[PlayerInventory] Debug refill applied: " +
+                $"+{_debugAddSeeds} HeadSeed, +{_debugAddFertilizer} Fertilizer, " +
+                $"+{_debugAddLegFry} LegFry, +{_debugAddFeedItem} FeedItem.  " +
                 $"Now: {_inventory.GetCount(ItemType.HeadSeed)} seeds, " +
-                $"{_inventory.GetCount(ItemType.Fertilizer)} fertilizer.", this);
+                $"{_inventory.GetCount(ItemType.Fertilizer)} fertilizer, " +
+                $"{_inventory.GetCount(ItemType.LegFry)} leg fry, " +
+                $"{_inventory.GetCount(ItemType.FeedItem)} feed.", this);
         }
 #endif
 

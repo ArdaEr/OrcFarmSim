@@ -5,35 +5,36 @@ using UnityEngine;
 namespace OrcFarm.Carry
 {
     /// <summary>
-    /// A harvested head in the world. Implements <see cref="IInteractable"/> so the player
-    /// can pick it up through the existing interaction flow, and <see cref="IPoolable"/>
-    /// so the pool can cleanly reset it between uses (§3.5).
+    /// A harvested leg in the world. Implements <see cref="IInteractable"/> so the player
+    /// can re-pick it up after a drop, and <see cref="IPoolable"/> so the pool can cleanly
+    /// reset it between uses (§3.5).
     ///
-    /// While carried the Collider is disabled (preventing physics conflicts with the player
-    /// capsule) and the Rigidbody is made kinematic (stopping physics simulation).
-    /// Both are restored when the head is dropped.
+    /// On harvest, <see cref="LegPond"/> immediately calls <see cref="ICarryController.PickUpLeg"/>
+    /// so the leg enters the carry slot without requiring a manual pickup. If the player
+    /// then drops it (Q key), it becomes a live world object that can be picked up via
+    /// <see cref="OnInteract"/>.
     ///
-    /// Disabling the Collider while inside the <see cref="InteractionDetector"/> sphere causes
-    /// Unity's physics engine to fire <c>OnTriggerExit</c>, cleanly removing this object from
-    /// the candidate list. Re-enabling it at the drop position fires <c>OnTriggerEnter</c>
-    /// if still in range, making the head targetable again.
+    /// While carried the Collider is disabled and the Rigidbody is kinematic — same
+    /// contract as <see cref="HarvestedHead"/>. Both are restored on drop.
     ///
-    /// The <see cref="ICarryController"/> reference is set via <see cref="Initialize"/> after
-    /// the pool retrieves this instance — not via the inspector.
+    /// <see cref="OrcQuality"/> is set by <see cref="LegPond"/> immediately after the
+    /// pool returns this instance, before the leg enters carry.
     /// </summary>
     [RequireComponent(typeof(Rigidbody))]
     [RequireComponent(typeof(Collider))]
-    public sealed class HarvestedHead : MonoBehaviour, IInteractable, IPoolable
+    public sealed class HarvestedLeg : MonoBehaviour, IInteractable, IPoolable
     {
         private Rigidbody        _rb;
         private Collider         _col;
         private bool             _isCarried;
         private ICarryController _carry;
 
+        /// <summary>Quality tier set by the pond at harvest time.</summary>
+        public OrcQuality Quality { get; private set; }
+
         // ── IInteractable ──────────────────────────────────────────────────────
 
         /// <inheritdoc/>
-        /// <remarks>False while carried or while this component is disabled.</remarks>
         public bool CanInteract => enabled && !_isCarried;
 
         /// <inheritdoc/>
@@ -42,11 +43,11 @@ namespace OrcFarm.Carry
             if (_carry == null)
             {
                 Debug.LogWarning(
-                    $"[HarvestedHead] Cannot pick up '{gameObject.name}' — ICarryController is null.", this);
+                    $"[HarvestedLeg] Cannot pick up '{gameObject.name}' — ICarryController is null.", this);
                 return;
             }
 
-            _carry.PickUp(this);
+            _carry.PickUpLeg(this);
         }
 
         // ── IPoolable ──────────────────────────────────────────────────────────
@@ -55,21 +56,18 @@ namespace OrcFarm.Carry
         public void OnGetFromPool() => ResetState();
 
         /// <inheritdoc/>
-        public void OnReturnToPool() { } // deactivation and re-parenting handled by the pool
+        public void OnReturnToPool() { }
 
         /// <inheritdoc/>
-        /// <remarks>
-        /// Clears the carry reference, resets physics to the dropped (non-kinematic) state,
-        /// and re-enables the collider so the head is interactable when retrieved.
-        /// </remarks>
         public void ResetState()
         {
             _isCarried = false;
             _carry     = null;
+            Quality    = OrcQuality.Low;
 
             transform.SetParent(null);
 
-            _rb.isKinematic = false;
+            _rb.isKinematic     = false;
             _rb.linearVelocity  = Vector3.zero;
             _rb.angularVelocity = Vector3.zero;
 
@@ -79,12 +77,20 @@ namespace OrcFarm.Carry
         // ── Initialization ─────────────────────────────────────────────────────
 
         /// <summary>
-        /// Sets the carry controller after the pool retrieves this instance.
-        /// Must be called before the player can interact with this head.
+        /// Sets the carry controller. Must be called by the pool caller before entering carry.
         /// </summary>
         public void Initialize(ICarryController carryController)
         {
             _carry = carryController;
+        }
+
+        /// <summary>
+        /// Sets the quality tier. Called by <see cref="OrcFarm.Farming.LegPond"/> after
+        /// retrieving this instance from the pool.
+        /// </summary>
+        public void SetQuality(OrcQuality quality)
+        {
+            Quality = quality;
         }
 
         // ── Unity lifecycle ────────────────────────────────────────────────────
@@ -98,24 +104,21 @@ namespace OrcFarm.Carry
         // ── Called by CarryController only ─────────────────────────────────────
 
         /// <summary>
-        /// Disables physics and collision, then parents this head to the carry anchor.
-        /// Do not call this directly — use <see cref="ICarryController.PickUp"/> instead.
+        /// Disables physics and collision, then parents this leg to the carry anchor.
+        /// Do not call directly — use <see cref="ICarryController.PickUpLeg"/> instead.
         /// </summary>
         internal void AttachToAnchor(Transform anchor)
         {
             _isCarried = true;
 
-            // Disable the collider first.
-            // Unity fires OnTriggerExit on the InteractionDetector's sphere when a
-            // non-trigger collider is disabled, removing this head from its candidate list.
             _col.enabled = false;
 
-            // Stop any in-progress motion before making kinematic.
             if (!_rb.isKinematic)
             {
                 _rb.linearVelocity  = Vector3.zero;
                 _rb.angularVelocity = Vector3.zero;
             }
+
             _rb.isKinematic = true;
 
             transform.SetParent(anchor);
@@ -124,20 +127,8 @@ namespace OrcFarm.Carry
         }
 
         /// <summary>
-        /// Re-parents this head under <paramref name="storageRoot"/> while keeping it in its
-        /// current disabled-physics state.
-        /// Do not call this directly — use <see cref="ICarryController.TryStore"/> instead.
-        /// </summary>
-        internal void StoreInto(Transform storageRoot)
-        {
-            transform.SetParent(storageRoot);
-            transform.localPosition = Vector3.zero;
-            transform.localRotation = Quaternion.identity;
-        }
-
-        /// <summary>
         /// Detaches from the carry anchor, re-enables physics, and applies a drop impulse.
-        /// Do not call this directly — use <see cref="ICarryController.PhysicalDrop"/> instead.
+        /// Do not call directly — use <see cref="ICarryController.PhysicalDrop"/> instead.
         /// </summary>
         internal void DetachToWorld(Vector3 position, Vector3 impulse)
         {
@@ -147,9 +138,7 @@ namespace OrcFarm.Carry
             transform.position = position;
 
             _rb.isKinematic = false;
-
-            // Re-enable collider at the drop position.
-            _col.enabled = true;
+            _col.enabled    = true;
 
             _rb.AddForce(impulse, ForceMode.Impulse);
         }

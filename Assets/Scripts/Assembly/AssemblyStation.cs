@@ -15,10 +15,9 @@ namespace OrcFarm.Assembly
     /// Interaction is gated on the player actively carrying a head; the station is
     /// idle and non-interactable otherwise.
     ///
-    /// Head consumption: <see cref="CarryController.TryStore"/> parents the carried
-    /// head into <c>_consumedRoot</c>, an inactive child GameObject created in Awake.
-    /// Unity's inactive-hierarchy rule makes the head invisible and non-interactable
-    /// immediately, without destroying the pooled object or calling SetActive per-head.
+    /// Head consumption: <see cref="ICarryController.SilentReturn"/> is called, which
+    /// returns the carried head to <see cref="OrcFarm.Farming.HarvestedHeadPool"/>
+    /// with no physics drop. The head is deactivated and pooled immediately.
     ///
     /// MonoBehaviour justification: owns Unity lifecycle (Awake validation, Collider
     /// for interaction detection) and holds scene-side serialized references. No logic
@@ -86,11 +85,6 @@ namespace OrcFarm.Assembly
         [Min(0.1f)]
         [SerializeField] private float _readoutClearDelay = 4f;
 
-        // Inactive child that receives consumed heads.
-        // Any head parented here becomes inactive-in-hierarchy (renderer hidden,
-        // collider already disabled from pickup) without a per-head SetActive call.
-        private Transform _consumedRoot;
-
         // Cached to avoid a new allocation each time the readout is shown (§3.9).
         private WaitForSeconds _clearWait;
 
@@ -109,10 +103,9 @@ namespace OrcFarm.Assembly
             if (!CanInteract)
                 return;
 
-            // Consume: TryStore parents the carried head into the inactive _consumedRoot.
-            // The head inherits the inactive-hierarchy state and disappears from the scene.
-            if (!_carry.TryStore(_consumedRoot))
-                return;
+            // Consume: SilentReturn() returns the carried head to HarvestedHeadPool with
+            // no physics drop. The head is deactivated immediately.
+            _carry.SilentReturn();
 
             ShowOrcResult();
             ShowResultText();
@@ -126,14 +119,6 @@ namespace OrcFarm.Assembly
             if (_carry == null)
                 throw new System.InvalidOperationException(
                     $"[AssemblyStation '{gameObject.name}'] CarryController not assigned.");
-
-            // Create the inactive consumed-heads root.
-            // SetActive(false) here means every head parented to it later is
-            // automatically hidden without additional per-head calls.
-            var consumeGo = new GameObject("[ConsumedHeads]");
-            consumeGo.transform.SetParent(transform, worldPositionStays: false);
-            consumeGo.SetActive(false);
-            _consumedRoot = consumeGo.transform;
 
             _clearWait = new WaitForSeconds(_readoutClearDelay);
 

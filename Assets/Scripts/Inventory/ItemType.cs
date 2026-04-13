@@ -17,5 +17,14 @@ namespace OrcFarm.Inventory
 
         /// <summary>The result of a successful harvest from a farm plot.</summary>
         HarvestedHead = 3,
+
+        /// <summary>Juvenile leg fry stocked into a LegPond to begin growth.</summary>
+        LegFry = 4,
+
+        /// <summary>Feed consumed at the leg pond care checkpoint.</summary>
+        FeedItem = 5,
+
+        /// <summary>The result of a successful leg pond harvest.</summary>
+        HarvestedLeg = 6,
     }
 }

@@ -7,7 +7,9 @@
         "OrcFarm.Interaction",
         "OrcFarm.Carry",
         "VContainer",
-        "MessagePipe"
+        "MessagePipe",
+        "UniTask",
+        "Unity.TextMeshPro"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -14,6 +14,7 @@
     "com.cysharp.messagepipe.vcontainer": "1.8.1",
     "com.cysharp.unitask": "2.5.10",
     "com.unity.addressables": "2.9.1",
+    "com.unity.ai.assistant": "2.5.0-pre.2",
     "com.unity.ai.navigation": "2.0.11",
     "com.unity.collab-proxy": "2.11.4",
     "com.unity.ide.rider": "3.0.39",

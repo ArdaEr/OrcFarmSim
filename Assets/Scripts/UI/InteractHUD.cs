@@ -53,10 +53,14 @@ namespace OrcFarm.UI
 
         private IInteractable _lastTarget;
         private bool          _lastCarrying        = true;   // force first-frame status write
+        private bool          _lastCarryingLeg;
         private int           _lastSeedCount       = -1;
         private int           _lastFertilizerCount = -1;
+        private int           _lastFeedItemCount   = -1;
+        private int           _lastLegFryCount     = -1;
         private PlotState     _lastPlotState       = (PlotState)(-1);  // used by UpdatePrompt
         private PlotState     _lastPlotStatusState = (PlotState)(-1);  // used by UpdatePlotStatus
+        private LegPondState  _lastPondState       = (LegPondState)(-1);
         private bool          _lastCanSecondary;                        // tracks Q prompt visibility
         private bool          _loggedMissingInjection;
 
@@ -118,17 +122,18 @@ namespace OrcFarm.UI
         private void UpdatePrompt()
         {
             IInteractable target         = _interactionService.CurrentTarget;
-            bool          plotChanged    = target is FarmPlot fp && fp.State != _lastPlotState;
+            bool          plotChanged    = target is FarmPlot fp  && fp.State  != _lastPlotState;
+            bool          pondChanged    = target is LegPond  lp  && lp.State  != _lastPondState;
             bool          canSecondary   = target is ISecondaryInteractable s && s.CanSecondaryInteract;
             bool          secondaryChanged = canSecondary != _lastCanSecondary;
 
-            if (target == _lastTarget && !plotChanged && !secondaryChanged)
+            if (target == _lastTarget && !plotChanged && !pondChanged && !secondaryChanged)
                 return;
 
             _lastTarget       = target;
             _lastCanSecondary = canSecondary;
-            if (target is FarmPlot fp2)
-                _lastPlotState = fp2.State;
+            if (target is FarmPlot fp2) _lastPlotState = fp2.State;
+            if (target is LegPond  lp2) _lastPondState = lp2.State;
 
             if (target == null || !target.CanInteract)
             {
@@ -155,8 +160,14 @@ namespace OrcFarm.UI
             if (target is FarmPlot plot)
                 return "E:  " + GetFarmPlotAction(plot.State);
 
+            if (target is LegPond pond)
+                return "E:  " + GetLegPondAction(pond.State);
+
             if (target is HarvestedHead)
                 return "E:  Pick up head";
+
+            if (target is HarvestedLeg)
+                return "E:  Pick up leg";
 
             if (target is HeadStorageContainer storage)
                 return _carry.IsCarrying
@@ -185,16 +196,30 @@ namespace OrcFarm.UI
             _                        => string.Empty,
         };
 
+        private static string GetLegPondAction(LegPondState state) => state switch
+        {
+            LegPondState.Empty          => "Stock pond",
+            LegPondState.NeedsCare      => "Feed pond",
+            LegPondState.ReadyToHarvest => "Harvest legs",
+            LegPondState.Starved        => "Clear pond",
+            _                           => string.Empty,
+        };
+
         // ── Status ─────────────────────────────────────────────────────────────
 
         private void UpdateStatus()
         {
-            bool carrying = _carry.IsCarrying;
-            if (carrying == _lastCarrying)
+            bool carrying    = _carry.IsCarrying;
+            bool carryingLeg = _carry.IsCarryingLeg;
+
+            if (carrying == _lastCarrying && carryingLeg == _lastCarryingLeg)
                 return;
 
             _lastCarrying    = carrying;
-            _statusText.text = carrying ? "Carrying:  head" : string.Empty;
+            _lastCarryingLeg = carryingLeg;
+            _statusText.text = carrying
+                ? (carryingLeg ? "Carrying:  leg" : "Carrying:  head")
+                : string.Empty;
         }
 
         // ── Plot status (non-interactable states only) ─────────────────────────
@@ -226,14 +251,24 @@ namespace OrcFarm.UI
 
             int seeds      = _inventory.GetCount(ItemType.HeadSeed);
             int fertilizer = _inventory.GetCount(ItemType.Fertilizer);
+            int feedItem   = _inventory.GetCount(ItemType.FeedItem);
+            int legFry     = _inventory.GetCount(ItemType.LegFry);
 
-            if (seeds == _lastSeedCount && fertilizer == _lastFertilizerCount)
+            if (seeds      == _lastSeedCount
+             && fertilizer == _lastFertilizerCount
+             && feedItem   == _lastFeedItemCount
+             && legFry     == _lastLegFryCount)
                 return;
 
             _lastSeedCount       = seeds;
             _lastFertilizerCount = fertilizer;
+            _lastFeedItemCount   = feedItem;
+            _lastLegFryCount     = legFry;
 
-            _inventoryText.text = "Seeds:       " + seeds + "\nFertilizer:  " + fertilizer;
+            _inventoryText.text = "Seeds:       " + seeds
+                                + "\nFertilizer:  " + fertilizer
+                                + "\nFeed:        " + feedItem
+                                + "\nLeg Fry:     " + legFry;
         }
     }
 }

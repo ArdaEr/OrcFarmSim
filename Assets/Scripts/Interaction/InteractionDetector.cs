@@ -54,6 +54,14 @@ namespace OrcFarm.Interaction
 
         private void Update()
         {
+            // Remove stale candidates every frame before selection.
+            // Handles the case where a head is silently returned to the pool
+            // (SetActive(false)) without OnTriggerExit firing reliably — the
+            // candidate Transform is not destroyed so the t == null guard in
+            // FindNearest does not catch it, but activeInHierarchy becomes false.
+            // Zero allocation: backwards index loop, no new collections (§3.2).
+            RemoveStaleCandidates();
+
             // Fallback: Unity does not fire OnTriggerEnter when a collider is activated
             // or spawned inside an existing trigger volume (e.g. a harvested head that
             // spawns at the plot while the player is standing next to it).
@@ -70,6 +78,20 @@ namespace OrcFarm.Interaction
         {
             if (CurrentTarget != null && CurrentTarget.CanInteract)
                 CurrentTarget.OnInteract();
+        }
+
+        // Removes candidates whose GameObject has been deactivated or whose Collider has
+        // been disabled since the last frame. Necessary because SetActive(false) does not
+        // reliably fire OnTriggerExit within the same physics step.
+        // Backwards loop so RemoveAt(i) does not shift unvisited indices (§3.2).
+        private void RemoveStaleCandidates()
+        {
+            for (int i = _candidates.Count - 1; i >= 0; i--)
+            {
+                var (_, t, c) = _candidates[i];
+                if (t == null || !t.gameObject.activeInHierarchy || !c.enabled)
+                    _candidates.RemoveAt(i);
+            }
         }
 
         // Populates candidates for colliders that enter the sphere normally.

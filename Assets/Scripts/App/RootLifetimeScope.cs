@@ -1,12 +1,12 @@
 using System;
 using MessagePipe;
 using OrcFarm.Carry;
+using OrcFarm.Core;
 using OrcFarm.Farming;
 using OrcFarm.Interaction;
 using OrcFarm.Inventory;
 using OrcFarm.Player;
 using UnityEngine;
-using UnityEngine.AddressableAssets;
 using VContainer;
 using VContainer.Unity;
 
@@ -15,25 +15,26 @@ namespace OrcFarm.App
     public sealed class RootLifetimeScope : LifetimeScope
     {
         [Header("Scene service instances")]
-        [SerializeField] private PlayerInputSource _inputSource;
-        [SerializeField] private InteractionDetector _interactionDetector;
-        [SerializeField] private PlayerInventory _playerInventory;
-        [SerializeField] private CarryController _carryController;
+        [SerializeField] private PlayerInputSource    _inputSource;
+        [SerializeField] private InteractionDetector  _interactionDetector;
+        [SerializeField] private PlayerInventory      _playerInventory;
+        [SerializeField] private CarryController      _carryController;
 
         [Header("Injected scene consumers")]
         [SerializeField] private PlayerInteractor _playerInteractor;
-        [SerializeField] private PlayerMover _playerMover;
-        [SerializeField] private PlayerLook _playerLook;
-        [SerializeField] private FarmPlot[] _farmPlots;
+        [SerializeField] private PlayerMover      _playerMover;
+        [SerializeField] private PlayerLook       _playerLook;
+        [SerializeField] private FarmPlot[]       _farmPlots;
 
         [Header("Injected scene consumers (continued)")]
-        [SerializeField] private OrcFarm.UI.InteractHUD _interactHud;
+        [SerializeField] private OrcFarm.UI.InteractHUD               _interactHud;
         [SerializeField] private OrcFarm.Storage.HeadStorageContainer[] _storageContainers;
+        [SerializeField] private LegPond[]                              _legPonds;
 
         [Header("HarvestedHead pool")]
-        [SerializeField] private AssetReferenceT<GameObject> _harvestedHeadRef;
-        [SerializeField] private Transform _headPoolRoot;
-        [SerializeField] private int _headPoolSize = 8;
+        [Tooltip("HarvestedHeadPool MonoBehaviour in the scene. " +
+                 "Assign after adding the component to an appropriate GameObject.")]
+        [SerializeField] private HarvestedHeadPool _headPool;
 
         protected override void Configure(IContainerBuilder builder)
         {
@@ -41,7 +42,17 @@ namespace OrcFarm.App
             ValidateSceneReferences();
 
             var pipeOptions = builder.RegisterMessagePipe();
-            builder.RegisterBuildCallback(c => GlobalMessagePipe.SetProvider(c.AsServiceProvider()));
+            builder.RegisterBuildCallback(c =>
+            {
+                GlobalMessagePipe.SetProvider(c.AsServiceProvider());
+
+                // Wire the pool into CarryController after the container is built.
+                // CarryController is in OrcFarm.Carry which cannot reference OrcFarm.Farming
+                // (circular dependency), so the pool is set via a public setter rather than
+                // [Inject] — no change to Carry.asmdef required.
+                _carryController.SetPool(c.Resolve<IHarvestedHeadPool>());
+            });
+
             builder.RegisterMessageBroker<CropHarvestedSignal>(pipeOptions);
 
             builder.RegisterComponent<IPlayerInputProvider>(_inputSource);
@@ -60,14 +71,21 @@ namespace OrcFarm.App
                     builder.RegisterComponent(_farmPlots[i]);
             }
 
-            builder.Register<HarvestedHeadPool>(Lifetime.Singleton)
-                   .WithParameter(_harvestedHeadRef)
-                   .WithParameter(_headPoolRoot)
-                   .WithParameter(_headPoolSize)
-                   .AsImplementedInterfaces()
-                   .AsSelf();
+            // Register the scene-placed MonoBehaviour pool as IHarvestedHeadPool.
+            // Both HarvestCoordinator (constructor injection) and CarryController
+            // (RegisterBuildCallback above) receive this instance.
+            builder.RegisterComponent<IHarvestedHeadPool>(_headPool);
 
             builder.RegisterEntryPoint<HarvestCoordinator>(Lifetime.Singleton);
+
+            if (_legPonds != null)
+            {
+                for (int i = 0; i < _legPonds.Length; i++)
+                {
+                    if (_legPonds[i] != null)
+                        builder.RegisterComponent(_legPonds[i]);
+                }
+            }
 
             if (_storageContainers != null)
             {
@@ -78,19 +96,25 @@ namespace OrcFarm.App
                 }
             }
         }
+
         private void ResolveSceneReferences()
         {
-            _inputSource ??= FindFirstObjectByType<PlayerInputSource>(FindObjectsInactive.Include);
+            _inputSource         ??= FindFirstObjectByType<PlayerInputSource>(FindObjectsInactive.Include);
             _interactionDetector ??= FindFirstObjectByType<InteractionDetector>(FindObjectsInactive.Include);
-            _playerInventory ??= FindFirstObjectByType<PlayerInventory>(FindObjectsInactive.Include);
-            _carryController ??= FindFirstObjectByType<CarryController>(FindObjectsInactive.Include);
+            _playerInventory     ??= FindFirstObjectByType<PlayerInventory>(FindObjectsInactive.Include);
+            _carryController     ??= FindFirstObjectByType<CarryController>(FindObjectsInactive.Include);
 
             _playerInteractor ??= FindFirstObjectByType<PlayerInteractor>(FindObjectsInactive.Include);
-            _playerMover ??= FindFirstObjectByType<PlayerMover>(FindObjectsInactive.Include);
-            _playerLook ??= FindFirstObjectByType<PlayerLook>(FindObjectsInactive.Include);
+            _playerMover      ??= FindFirstObjectByType<PlayerMover>(FindObjectsInactive.Include);
+            _playerLook       ??= FindFirstObjectByType<PlayerLook>(FindObjectsInactive.Include);
 
             if (_farmPlots == null || _farmPlots.Length == 0)
                 _farmPlots = FindObjectsByType<FarmPlot>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+
+            if (_legPonds == null || _legPonds.Length == 0)
+                _legPonds = FindObjectsByType<LegPond>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+
+            _headPool ??= FindFirstObjectByType<HarvestedHeadPool>(FindObjectsInactive.Include);
         }
 
         private void ValidateSceneReferences()
@@ -111,10 +135,8 @@ namespace OrcFarm.App
                 throw new InvalidOperationException("[RootLifetimeScope] Missing PlayerLook.");
             if (_farmPlots == null || _farmPlots.Length == 0)
                 throw new InvalidOperationException("[RootLifetimeScope] Missing FarmPlot.");
-            if (_harvestedHeadRef == null)
-                throw new InvalidOperationException("[RootLifetimeScope] Missing HarvestedHead AssetReference.");
-            if (_headPoolRoot == null)
-                throw new InvalidOperationException("[RootLifetimeScope] Missing head pool root Transform.");
+            if (_headPool == null)
+                throw new InvalidOperationException("[RootLifetimeScope] Missing HarvestedHeadPool.");
         }
     }
 }
