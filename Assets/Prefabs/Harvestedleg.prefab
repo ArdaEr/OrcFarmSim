@@ -155,3 +155,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 060fb02f3db57fd4c861ccf356c06e89, type: 3}
   m_Name: 
   m_EditorClassIdentifier: OrcFarm.Carry::OrcFarm.Carry.HarvestedLeg
+  _carryLocalPosition: {x: 0.3, y: -0.25, z: 0.5}
+  _carryLocalRotation: {x: 30, y: -20, z: 10}
+  _carryLocalScale: {x: 1, y: 0.31438345, z: 1}

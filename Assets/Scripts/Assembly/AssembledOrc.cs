@@ -7,8 +7,8 @@ namespace OrcFarm.Assembly
     /// Placeholder component marking an assembled orc world object.
     ///
     /// Exposes <see cref="Quality"/> so the sell system can determine sale price.
-    /// Quality defaults to Normal; a future sprint will set it based on assembly
-    /// inputs (head trait + body-part combination).
+    /// Quality is set by <see cref="AssemblyStation"/> immediately after spawning,
+    /// based on the quality of the parts used in assembly.
     ///
     /// Attach to any GameObject that visually represents an assembled orc in the scene.
     /// <see cref="AssemblyStation"/> instantiates this from a prefab on each assembly.
@@ -17,8 +17,17 @@ namespace OrcFarm.Assembly
     {
         /// <summary>
         /// Quality tier of this orc. Readable by the sell system to determine price.
-        /// Defaults to Normal until assembly logic assigns it.
+        /// Set by <see cref="AssemblyStation"/> via <see cref="SetQuality"/> after spawn.
         /// </summary>
-        public OrcQuality Quality { get; } = OrcQuality.Normal;
+        public OrcQuality Quality { get; private set; } = OrcQuality.Normal;
+
+        /// <summary>
+        /// Assigns the quality tier. Called by <see cref="AssemblyStation"/> immediately
+        /// after instantiating this orc from the prefab.
+        /// </summary>
+        public void SetQuality(OrcQuality quality)
+        {
+            Quality = quality;
+        }
     }
 }
