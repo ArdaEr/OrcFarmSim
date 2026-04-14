@@ -30,9 +30,16 @@ namespace OrcFarm.Carry
         /// <summary>
         /// Transfers the currently carried head into storage by parenting it under
         /// <paramref name="storageRoot"/>. Returns true if a head was transferred.
-        /// Returns false if carrying a leg (legs have no storage yet).
+        /// Returns false if carrying a leg or nothing.
         /// </summary>
         bool TryStore(Transform storageRoot);
+
+        /// <summary>
+        /// Transfers the currently carried leg into storage by parenting it under
+        /// <paramref name="storageRoot"/> with physics and collision already disabled.
+        /// Returns true if a leg was transferred. Returns false if carrying a head or nothing.
+        /// </summary>
+        bool TryStoreLeg(Transform storageRoot);
 
         /// <summary>
         /// Detaches the carried item, re-enables physics, and launches it slightly in front

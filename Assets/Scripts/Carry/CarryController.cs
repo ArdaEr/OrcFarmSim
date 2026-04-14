@@ -5,19 +5,19 @@ using UnityEngine.InputSystem;
 namespace OrcFarm.Carry
 {
     /// <summary>
-    /// Manages carrying exactly one <see cref="HarvestedHead"/> at a time.
+    /// Manages carrying exactly one world item at a time — either a
+    /// <see cref="HarvestedHead"/> or a <see cref="HarvestedLeg"/>.
     ///
-    /// Attach to the player root alongside other player components.
-    /// Requires a carry anchor Transform child (e.g. at chest/hand height) assigned
-    /// in the inspector — the carried head is parented to this anchor.
+    /// Each item type has its own carry anchor (<see cref="_headCarryAnchor"/>,
+    /// <see cref="_legCarryAnchor"/>), positioned freely as children of the player
+    /// in the editor. Carried items are parented to their anchor and zeroed locally,
+    /// so repositioning is done by moving the anchor Transform — no code changes needed.
     ///
-    /// Press Q (keyboard) or Left Shoulder (gamepad) to drop the currently carried head.
-    /// This triggers <see cref="PhysicalDrop"/>: the head falls to the ground and stays as
-    /// a live world object. Picking up a second head while already carrying one also
-    /// triggers <see cref="PhysicalDrop"/> on the first head.
+    /// Press Q (keyboard) or Left Shoulder (gamepad) to drop the currently carried item.
+    /// Picking up a second item while already carrying one drops the first automatically.
     ///
-    /// Assembly-station consumption uses <see cref="SilentReturn"/> to return the head to
-    /// the pool without any physics drop.
+    /// Assembly-station consumption uses <see cref="SilentReturn"/> to return the head
+    /// to the pool without any physics drop.
     ///
     /// The <see cref="IHarvestedHeadPool"/> reference is set by the composition root
     /// via <see cref="SetPool"/> after the VContainer scope is built.
@@ -27,15 +27,19 @@ namespace OrcFarm.Carry
     /// </summary>
     public sealed class CarryController : MonoBehaviour, ICarryController
     {
-        [SerializeField] private Transform _carryAnchor;
+        [Tooltip("Child Transform positioned where a carried head should appear in first-person view.")]
+        [SerializeField] private Transform _headCarryAnchor;
 
-        [Tooltip("Metres in front of the player where a dropped head is placed.")]
+        [Tooltip("Child Transform positioned where a carried leg should appear in first-person view.")]
+        [SerializeField] private Transform _legCarryAnchor;
+
+        [Tooltip("Metres in front of the player where a dropped item is placed.")]
         [SerializeField] private float _dropForwardOffset = 1.2f;
 
         [Tooltip("Metres above the player origin added to the drop position.")]
         [SerializeField] private float _dropHeightOffset = 0.5f;
 
-        [Tooltip("Impulse magnitude applied to a dropped head (m/s).")]
+        [Tooltip("Impulse magnitude applied to a dropped item (m/s).")]
         [SerializeField] private float _dropImpulseStrength = 2f;
 
         private readonly InputAction _dropAction =
@@ -58,9 +62,13 @@ namespace OrcFarm.Carry
             _dropAction.AddBinding("<Keyboard>/q");
             _dropAction.AddBinding("<Gamepad>/leftShoulder");
 
-            if (_carryAnchor == null)
-                throw new System.InvalidOperationException(
-                    $"[CarryController] _carryAnchor not assigned on '{gameObject.name}'.");
+            if (_headCarryAnchor == null)
+                Debug.LogError(
+                    $"[CarryController] _headCarryAnchor not assigned on '{gameObject.name}'.", this);
+
+            if (_legCarryAnchor == null)
+                Debug.LogError(
+                    $"[CarryController] _legCarryAnchor not assigned on '{gameObject.name}'.", this);
         }
 
         private void OnEnable()  => _dropAction.Enable();
@@ -89,7 +97,7 @@ namespace OrcFarm.Carry
         // ── Public API ─────────────────────────────────────────────────────────
 
         /// <summary>
-        /// Picks up <paramref name="head"/>, attaching it to the carry anchor.
+        /// Picks up <paramref name="head"/>, parenting it to <see cref="_headCarryAnchor"/>.
         /// If anything is already being carried it is physically dropped first.
         /// Called by <see cref="HarvestedHead.OnInteract"/>; safe to call directly.
         /// </summary>
@@ -99,11 +107,11 @@ namespace OrcFarm.Carry
                 PhysicalDrop();
 
             _carried = head;
-            _carried.AttachToAnchor(_carryAnchor);
+            _carried.AttachToAnchor(_headCarryAnchor);
         }
 
         /// <summary>
-        /// Picks up <paramref name="leg"/>, attaching it to the carry anchor.
+        /// Picks up <paramref name="leg"/>, parenting it to <see cref="_legCarryAnchor"/>.
         /// If anything is already being carried it is physically dropped first.
         /// Called by <see cref="HarvestedLeg.OnInteract"/> and by LegPond on harvest.
         /// </summary>
@@ -113,15 +121,14 @@ namespace OrcFarm.Carry
                 PhysicalDrop();
 
             _carriedLeg = leg;
-            _carriedLeg.AttachToAnchor(_carryAnchor);
+            _carriedLeg.AttachToAnchor(_legCarryAnchor);
         }
 
         /// <summary>
         /// Transfers the currently carried head into storage by parenting it under
         /// <paramref name="storageRoot"/> with physics and collision already disabled.
         /// Returns true if a head was transferred.
-        /// Returns false if nothing is being carried, or if a leg is being carried
-        /// (legs have no storage target yet).
+        /// Returns false if nothing is being carried, or if a leg is being carried.
         /// Called by storage containers; do not call from other gameplay code.
         /// </summary>
         public bool TryStore(Transform storageRoot)
@@ -136,13 +143,27 @@ namespace OrcFarm.Carry
         }
 
         /// <summary>
-        /// Detaches the carried item from the carry anchor, re-enables physics and
-        /// collision, places it slightly in front of the player, and applies a small
-        /// random horizontal impulse so it rolls naturally. The item stays in the world —
-        /// it is NOT returned to any pool.
-        ///
-        /// Fires OnTriggerEnter on nearby InteractionDetectors once the Collider is
-        /// re-enabled, making the item immediately detectable and pickable.
+        /// Transfers the currently carried leg into storage by parenting it under
+        /// <paramref name="storageRoot"/> with physics and collision already disabled.
+        /// Returns true if a leg was transferred. Returns false if carrying a head or nothing.
+        /// Called by storage containers; do not call from other gameplay code.
+        /// </summary>
+        public bool TryStoreLeg(Transform storageRoot)
+        {
+            if (_carriedLeg == null)
+                return false;
+
+            HarvestedLeg leg = _carriedLeg;
+            _carriedLeg = null;     // clear before StoreInto in case of re-entrancy
+            leg.StoreInto(storageRoot);
+            return true;
+        }
+
+        /// <summary>
+        /// Detaches the carried item from its anchor, re-enables physics and collision,
+        /// places it slightly in front of the player, and applies a small random horizontal
+        /// impulse so it rolls naturally. The item stays in the world — it is NOT returned
+        /// to any pool.
         ///
         /// No-op if nothing is being carried.
         /// </summary>

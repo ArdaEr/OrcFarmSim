@@ -4,24 +4,28 @@ using OrcFarm.Interaction;
 using OrcFarm.Workers;
 using TMPro;
 using UnityEngine;
+using CoreQuality = OrcFarm.Core.OrcQuality;
 
 namespace OrcFarm.Assembly
 {
     /// <summary>
-    /// Assembly station in the Home area. Accepts a carried harvested head from the
-    /// player, combines it with fixed placeholder body-part data, and produces one
-    /// assembled orc result per interaction.
+    /// Assembly station in the Home area. Accepts one deposited <see cref="HarvestedHead"/>
+    /// and one deposited <see cref="HarvestedLeg"/> before assembly is allowed.
     ///
-    /// Interaction is gated on the player actively carrying a head; the station is
-    /// idle and non-interactable otherwise.
+    /// Deposit flow: player carries an item and interacts → item is parked in its slot
+    /// (<see cref="_headSlot"/> or <see cref="_legSlot"/>) via the carry system's store
+    /// methods. The player can take either part back as long as both slots are not filled
+    /// simultaneously (which triggers assembly instead).
     ///
-    /// Head consumption: <see cref="ICarryController.SilentReturn"/> is called, which
-    /// returns the carried head to <see cref="OrcFarm.Farming.HarvestedHeadPool"/>
-    /// with no physics drop. The head is deactivated and pooled immediately.
+    /// Assembly: when both slots are filled the next interaction consumes both parts,
+    /// spawns an <see cref="AssembledOrc"/> from the prefab, and shows the result readout.
     ///
-    /// MonoBehaviour justification: owns Unity lifecycle (Awake validation, Collider
-    /// for interaction detection) and holds scene-side serialized references. No logic
-    /// that belongs in a pure-C# class.
+    /// Quality of the assembled orc equals the deposited leg's quality tier. Head quality
+    /// is not exposed by the current OrcFarm.Carry API; a follow-up task extending
+    /// ICarryController will enable min(head, leg) quality once that data is available.
+    ///
+    /// MonoBehaviour justification: owns Unity lifecycle (Awake validation, Collider for
+    /// interaction detection) and holds scene-side serialized references.
     /// </summary>
     [RequireComponent(typeof(Collider))]
     public sealed class AssemblyStation : MonoBehaviour, IInteractable
@@ -31,33 +35,35 @@ namespace OrcFarm.Assembly
         [Tooltip("The player's CarryController. Assign in the Inspector.")]
         [SerializeField] private CarryController _carry;
 
-        [Tooltip("Optional. World position where the assembled orc result appears. " +
+        [Tooltip("Hidden child Transform where a deposited HarvestedHead is parked. " +
+                 "Create an empty child GameObject named 'HeadSlot' and assign it here.")]
+        [SerializeField] private Transform _headSlot;
+
+        [Tooltip("Hidden child Transform where a deposited HarvestedLeg is parked. " +
+                 "Create an empty child GameObject named 'LegSlot' and assign it here.")]
+        [SerializeField] private Transform _legSlot;
+
+        [Tooltip("Optional. World position where the assembled orc appears. " +
                  "Defaults to 1.5 m in front of the station if unassigned.")]
         [SerializeField] private Transform _orcSpawnPoint;
 
         [Header("Orc worker routes  —  injected into each spawned HaulerWorker")]
-        [Tooltip("The wait point Transform the hauler returns to when idle. " +
-                 "Assign the same WaitPoint object used by your existing scene orcs.")]
+        [Tooltip("The wait point Transform the hauler returns to when idle.")]
         [SerializeField] private Transform _orcWaitPoint;
 
-        [Tooltip("Walk target in front of the storage building. " +
-                 "Assign the same StorageWalkTarget object used by your existing scene orcs.")]
+        [Tooltip("Walk target in front of the storage building.")]
         [SerializeField] private Transform _orcStorageWalkTarget;
 
-        [Tooltip("ContentsRoot child of HeadStorageContainer where delivered heads are parented. " +
-                 "Assign the same StorageDeliveryRoot object used by your existing scene orcs.")]
+        [Tooltip("ContentsRoot child of HeadStorageContainer where delivered heads are parented.")]
         [SerializeField] private Transform _orcStorageDeliveryRoot;
 
-        [Tooltip("The orc holding pen. Injected into each spawned orc's KeepInteractable " +
-                 "so the player can Store assembled orcs. Assign the OrcHoldingPen scene object.")]
+        [Tooltip("The orc holding pen. Injected into each spawned orc's KeepInteractable.")]
         [SerializeField] private OrcHoldingPen _orcPen;
 
-        [Tooltip("AssembledOrc prefab to instantiate on each successful assembly. " +
-                 "Assign the AssembledOrc prefab from the Project window.")]
+        [Tooltip("AssembledOrc prefab to instantiate on each successful assembly.")]
         [SerializeField] private AssembledOrc _orcPrefab;
 
-        [Tooltip("Optional. TMP text that shows the assembly result summary. " +
-                 "Can be on a world-space Canvas child or a screen-space HUD Canvas.")]
+        [Tooltip("Optional. TMP text that shows the assembly result or hint messages.")]
         [SerializeField] private TextMeshProUGUI _resultText;
 
         // ── Placeholder body-part data ─────────────────────────────────────────
@@ -69,15 +75,9 @@ namespace OrcFarm.Assembly
         [Tooltip("Label for the arms slot (placeholder only).")]
         [SerializeField] private string _armsLabel  = "Basic Arms";
 
-        [Tooltip("Label for the legs slot (placeholder only).")]
-        [SerializeField] private string _legsLabel  = "Basic Legs";
-
         // ── Result labels ──────────────────────────────────────────────────────
 
         [Header("Result labels")]
-        [Tooltip("Quality label shown in the assembly result readout.")]
-        [SerializeField] private string _qualityLabel  = "Normal";
-
         [Tooltip("Tendency label shown in the assembly result readout.")]
         [SerializeField] private string _tendencyLabel = "Unknown";
 
@@ -85,17 +85,41 @@ namespace OrcFarm.Assembly
         [Min(0.1f)]
         [SerializeField] private float _readoutClearDelay = 4f;
 
+        private static readonly string MissingPartsHint = "You need a head and a leg to assemble";
+
         // Cached to avoid a new allocation each time the readout is shown (§3.9).
         private WaitForSeconds _clearWait;
 
         // Tracks the active clear coroutine so it can be cancelled on rapid re-assembly.
         private Coroutine _clearCoroutine;
 
+        // ── Slot state ─────────────────────────────────────────────────────────
+
+        private HarvestedHead _depositedHead;
+        private HarvestedLeg  _depositedLeg;
+
         // ── IInteractable ──────────────────────────────────────────────────────
 
         /// <inheritdoc/>
-        /// <remarks>Only available while the player is carrying a harvested head.</remarks>
-        public bool CanInteract => enabled && _carry != null && _carry.IsCarrying;
+        /// <remarks>
+        /// False only when the player is carrying nothing and both slots are empty.
+        /// All other states (depositing, taking back, assembling, partial hint) are true.
+        /// </remarks>
+        public bool CanInteract
+        {
+            get
+            {
+                if (!enabled || _carry == null)
+                    return false;
+
+                // No carry: prompt only if something can be taken back.
+                if (!_carry.IsCarrying)
+                    return _depositedHead != null || _depositedLeg != null;
+
+                // Carrying something: always show a prompt.
+                return true;
+            }
+        }
 
         /// <inheritdoc/>
         public void OnInteract()
@@ -103,13 +127,43 @@ namespace OrcFarm.Assembly
             if (!CanInteract)
                 return;
 
-            // Consume: SilentReturn() returns the carried head to HarvestedHeadPool with
-            // no physics drop. The head is deactivated immediately.
-            _carry.SilentReturn();
+            bool headFilled = _depositedHead != null;
+            bool legFilled  = _depositedLeg  != null;
 
-            ShowOrcResult();
-            ShowResultText();
-            LogAssembly();
+            // Both slots filled → assemble regardless of what the player is carrying (req 9).
+            if (headFilled && legFilled)
+            {
+                Assemble();
+                return;
+            }
+
+            // Carrying nothing → take back whichever slot is filled (req 6, 7).
+            if (!_carry.IsCarrying)
+            {
+                if (headFilled)
+                    TakeBackHead();
+                else
+                    TakeBackLeg();
+                return;
+            }
+
+            bool carryingLeg = _carry.IsCarryingLeg;
+
+            // Carrying a head (req 4: deposit; req 10: head slot already filled).
+            if (!carryingLeg)
+            {
+                if (!headFilled)
+                    DepositHead();
+                else
+                    ShowHintText(MissingPartsHint);
+                return;
+            }
+
+            // Carrying a leg (req 5: deposit; req 10: leg slot already filled).
+            if (!legFilled)
+                DepositLeg();
+            else
+                ShowHintText(MissingPartsHint);
         }
 
         // ── Unity lifecycle ────────────────────────────────────────────────────
@@ -120,15 +174,90 @@ namespace OrcFarm.Assembly
                 throw new System.InvalidOperationException(
                     $"[AssemblyStation '{gameObject.name}'] CarryController not assigned.");
 
+            if (_headSlot == null)
+                throw new System.InvalidOperationException(
+                    $"[AssemblyStation '{gameObject.name}'] HeadSlot Transform not assigned.");
+
+            if (_legSlot == null)
+                throw new System.InvalidOperationException(
+                    $"[AssemblyStation '{gameObject.name}'] LegSlot Transform not assigned.");
+
             _clearWait = new WaitForSeconds(_readoutClearDelay);
 
             if (_resultText != null)
                 _resultText.text = string.Empty;
         }
 
+        // ── Slot operations ────────────────────────────────────────────────────
+
+        private void DepositHead()
+        {
+            if (!_carry.TryStore(_headSlot))
+                return;
+
+            _depositedHead = _headSlot.childCount > 0
+                ? _headSlot.GetChild(0).GetComponent<HarvestedHead>()
+                : null;
+
+            LogSlotState("Deposited head");
+
+            if (_depositedHead != null && _depositedLeg != null)
+                Assemble();
+        }
+
+        private void DepositLeg()
+        {
+            if (!_carry.TryStoreLeg(_legSlot))
+                return;
+
+            _depositedLeg = _legSlot.childCount > 0
+                ? _legSlot.GetChild(0).GetComponent<HarvestedLeg>()
+                : null;
+
+            LogSlotState("Deposited leg");
+
+            if (_depositedHead != null && _depositedLeg != null)
+                Assemble();
+        }
+
+        private void TakeBackHead()
+        {
+            _carry.PickUp(_depositedHead);
+            _depositedHead = null;
+            LogSlotState("Took back head");
+        }
+
+        private void TakeBackLeg()
+        {
+            _carry.PickUpLeg(_depositedLeg);
+            _depositedLeg = null;
+            LogSlotState("Took back leg");
+        }
+
+        private void Assemble()
+        {
+            CoreQuality legQuality = _depositedLeg.Quality;
+            OrcQuality  quality    = (OrcQuality)(int)legQuality;
+
+            // Consume deposited head: deactivate in place.
+            // Note: does not return to HarvestedHeadPool — acceptable for prototype demo length.
+            _depositedHead.transform.SetParent(null);
+            _depositedHead.gameObject.SetActive(false);
+            _depositedHead = null;
+
+            // Consume deposited leg: deactivate in place (no leg pool exists).
+            _depositedLeg.transform.SetParent(null);
+            _depositedLeg.gameObject.SetActive(false);
+            _depositedLeg = null;
+
+            ShowOrcResult(quality);
+            ShowResultText(quality);
+            LogAssembly(quality);
+        }
+
         // ── Private helpers ────────────────────────────────────────────────────
 
-        private void ShowOrcResult()
+        private void ShowOrcResult(OrcQuality quality)
         {
             if (_orcPrefab == null)
                 return;
@@ -138,8 +267,8 @@ namespace OrcFarm.Assembly
                 : transform.position + transform.forward * 1.5f;
 
             AssembledOrc orc = Instantiate(_orcPrefab, spawnPos, _orcPrefab.transform.rotation);
+            orc.SetQuality(quality);
 
-            // Inject scene-side references that cannot be pre-assigned on a prefab.
             if (orc.TryGetComponent(out HaulerWorker hauler))
                 hauler.Initialize(_orcWaitPoint, _orcStorageWalkTarget, _orcStorageDeliveryRoot);
 
@@ -149,19 +278,31 @@ namespace OrcFarm.Assembly
             orc.gameObject.SetActive(true);
         }
 
-        private void ShowResultText()
+        private void ShowHintText(string hint)
         {
             if (_resultText == null)
                 return;
 
-            // String concatenation is acceptable here: OnInteract is event-driven,
+            _resultText.text = hint;
+
+            if (_clearCoroutine != null)
+                StopCoroutine(_clearCoroutine);
+
+            _clearCoroutine = StartCoroutine(ClearResultAfterDelay());
+        }
+
+        private void ShowResultText(OrcQuality quality)
+        {
+            if (_resultText == null)
+                return;
+
+            // String concatenation is acceptable here — OnInteract is event-driven,
             // not a per-frame hot path (§3.3 applies to Update/FixedUpdate only).
             _resultText.text =
                 "Orc assembled\n" +
-                "Quality:    " + _qualityLabel  + "\n" +
+                "Quality:    " + quality       + "\n" +
                 "Tendency:   " + _tendencyLabel;
 
-            // Cancel any pending clear from a previous assembly before starting a new one.
             if (_clearCoroutine != null)
                 StopCoroutine(_clearCoroutine);
 
@@ -177,12 +318,21 @@ namespace OrcFarm.Assembly
         }
 
         [System.Diagnostics.Conditional("UNITY_EDITOR")]
-        private void LogAssembly()
+        private void LogSlotState(string action)
+        {
+            Debug.Log(
+                $"[AssemblyStation '{gameObject.name}'] {action}. " +
+                $"Head slot: {(_depositedHead != null ? "filled" : "empty")}, " +
+                $"Leg slot: {(_depositedLeg  != null ? "filled" : "empty")}.", this);
+        }
+
+        [System.Diagnostics.Conditional("UNITY_EDITOR")]
+        private void LogAssembly(OrcQuality quality)
         {
             Debug.Log(
                 $"[AssemblyStation '{gameObject.name}'] Assembly complete. " +
-                $"Head + {_torsoLabel} + {_armsLabel} + {_legsLabel}. " +
-                $"Quality: {_qualityLabel}, Tendency: {_tendencyLabel}.", this);
+                $"Head + {_torsoLabel} + {_armsLabel} + Leg. " +
+                $"Quality: {quality}, Tendency: {_tendencyLabel}.", this);
         }
     }
 }

@@ -2,9 +2,11 @@
     "name": "OrcFarm.Assembly",
     "rootNamespace": "OrcFarm.Assembly",
     "references": [
+        "OrcFarm.Core",
         "OrcFarm.Interaction",
         "OrcFarm.Carry",
         "OrcFarm.Workers",
+        "OrcFarm.Storage",
         "Unity.TextMeshPro"
     ],
     "includePlatforms": [],

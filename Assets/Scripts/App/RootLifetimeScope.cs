@@ -6,6 +6,7 @@ using OrcFarm.Farming;
 using OrcFarm.Interaction;
 using OrcFarm.Inventory;
 using OrcFarm.Player;
+using OrcFarm.Storage;
 using UnityEngine;
 using VContainer;
 using VContainer.Unity;
@@ -27,9 +28,10 @@ namespace OrcFarm.App
         [SerializeField] private FarmPlot[]       _farmPlots;
 
         [Header("Injected scene consumers (continued)")]
-        [SerializeField] private OrcFarm.UI.InteractHUD               _interactHud;
-        [SerializeField] private OrcFarm.Storage.HeadStorageContainer[] _storageContainers;
-        [SerializeField] private LegPond[]                              _legPonds;
+        [SerializeField] private OrcFarm.UI.InteractHUD          _interactHud;
+        [SerializeField] private HeadStorageContainer[]           _headStorageContainers;
+        [SerializeField] private LegStorageContainer[]            _legStorageContainers;
+        [SerializeField] private LegPond[]                        _legPonds;
 
         [Header("HarvestedHead pool")]
         [Tooltip("HarvestedHeadPool MonoBehaviour in the scene. " +
@@ -87,12 +89,21 @@ namespace OrcFarm.App
                 }
             }
 
-            if (_storageContainers != null)
+            if (_headStorageContainers != null)
             {
-                for (int i = 0; i < _storageContainers.Length; i++)
+                for (int i = 0; i < _headStorageContainers.Length; i++)
                 {
-                    if (_storageContainers[i] != null)
-                        builder.RegisterComponent(_storageContainers[i]);
+                    if (_headStorageContainers[i] != null)
+                        builder.RegisterComponent(_headStorageContainers[i]);
+                }
+            }
+
+            if (_legStorageContainers != null)
+            {
+                for (int i = 0; i < _legStorageContainers.Length; i++)
+                {
+                    if (_legStorageContainers[i] != null)
+                        builder.RegisterComponent(_legStorageContainers[i]);
                 }
             }
         }
@@ -113,6 +124,12 @@ namespace OrcFarm.App
 
             if (_legPonds == null || _legPonds.Length == 0)
                 _legPonds = FindObjectsByType<LegPond>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+
+            if (_headStorageContainers == null || _headStorageContainers.Length == 0)
+                _headStorageContainers = FindObjectsByType<HeadStorageContainer>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+
+            if (_legStorageContainers == null || _legStorageContainers.Length == 0)
+                _legStorageContainers = FindObjectsByType<LegStorageContainer>(FindObjectsInactive.Include, FindObjectsSortMode.None);
 
             _headPool ??= FindFirstObjectByType<HarvestedHeadPool>(FindObjectsInactive.Include);
         }

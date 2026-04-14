@@ -127,6 +127,18 @@ namespace OrcFarm.Carry
         }
 
         /// <summary>
+        /// Re-parents this leg under <paramref name="storageRoot"/> while keeping it in its
+        /// current disabled-physics state.
+        /// Do not call this directly — use <see cref="ICarryController.TryStoreLeg"/> instead.
+        /// </summary>
+        internal void StoreInto(Transform storageRoot)
+        {
+            transform.SetParent(storageRoot);
+            transform.localPosition = Vector3.zero;
+            transform.localRotation = Quaternion.identity;
+        }
+
+        /// <summary>
         /// Detaches from the carry anchor, re-enables physics, and applies a drop impulse.
         /// Do not call directly — use <see cref="ICarryController.PhysicalDrop"/> instead.
         /// </summary>
