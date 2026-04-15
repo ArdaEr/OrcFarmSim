@@ -30,6 +30,14 @@ namespace OrcFarm.Carry
         private bool             _isCarried;
         private ICarryController _carry;
 
+        // ── Quality ────────────────────────────────────────────────────────────
+
+        /// <summary>Quality assigned when this head was harvested. Reset to Low on pool return.</summary>
+        public OrcQuality Quality { get; private set; }
+
+        /// <summary>Sets the quality. Called by <see cref="HeadFarmTile"/> immediately after pool retrieval.</summary>
+        public void SetQuality(OrcQuality quality) => Quality = quality;
+
         // ── IInteractable ──────────────────────────────────────────────────────
 
         /// <inheritdoc/>
@@ -66,6 +74,7 @@ namespace OrcFarm.Carry
         {
             _isCarried = false;
             _carry     = null;
+            Quality    = OrcQuality.Low;
 
             transform.SetParent(null);
 

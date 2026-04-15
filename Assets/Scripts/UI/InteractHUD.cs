@@ -1,3 +1,4 @@
+using System.Collections;
 using OrcFarm.Carry;
 using OrcFarm.Farming;
 using OrcFarm.Interaction;
@@ -45,6 +46,12 @@ namespace OrcFarm.UI
         [Tooltip("Optional. Shows plot state when the plot cannot be interacted with.")]
         [SerializeField] private TextMeshProUGUI _plotStatusText;
 
+        [Tooltip("Optional. Shows a brief readout when a head is harvested from a HeadFarmTile.")]
+        [SerializeField] private TextMeshProUGUI _harvestResultText;
+
+        [Tooltip("Seconds before the harvest readout is cleared. Matches assembly result timing.")]
+        [SerializeField] private float _harvestResultClearDelay = 4f;
+
         private IInteractionService _interactionService;
         private ICarryController    _carry;
         private IPlayerInventory    _inventory;
@@ -61,8 +68,14 @@ namespace OrcFarm.UI
         private PlotState     _lastPlotState       = (PlotState)(-1);  // used by UpdatePrompt
         private PlotState     _lastPlotStatusState = (PlotState)(-1);  // used by UpdatePlotStatus
         private LegPondState  _lastPondState       = (LegPondState)(-1);
+        private HeadTileState _lastTileState       = (HeadTileState)(-1);
         private bool          _lastCanSecondary;                        // tracks Q prompt visibility
         private bool          _loggedMissingInjection;
+
+        // ── Harvest readout ────────────────────────────────────────────────────
+
+        private WaitForSeconds _harvestClearWait;
+        private Coroutine      _harvestClearCoroutine;
 
         // ── VContainer injection ───────────────────────────────────────────────
 
@@ -89,10 +102,15 @@ namespace OrcFarm.UI
             _statusText.text = string.Empty;
 
             if (_inventoryText != null)
-            _inventoryText.text = string.Empty;
+                _inventoryText.text = string.Empty;
 
             if (_plotStatusText != null)
-            _plotStatusText.text = string.Empty;
+                _plotStatusText.text = string.Empty;
+
+            if (_harvestResultText != null)
+                _harvestResultText.text = string.Empty;
+
+            _harvestClearWait = new WaitForSeconds(_harvestResultClearDelay);
         }
 
         // Compares current state against cached values; rebuilds text only on change.
@@ -121,19 +139,32 @@ namespace OrcFarm.UI
 
         private void UpdatePrompt()
         {
-            IInteractable target         = _interactionService.CurrentTarget;
-            bool          plotChanged    = target is FarmPlot fp  && fp.State  != _lastPlotState;
-            bool          pondChanged    = target is LegPond  lp  && lp.State  != _lastPondState;
-            bool          canSecondary   = target is ISecondaryInteractable s && s.CanSecondaryInteract;
+            IInteractable target          = _interactionService.CurrentTarget;
+            bool          plotChanged     = target is FarmPlot fp && fp.State != _lastPlotState;
+            bool          pondChanged     = target is LegPond  lp && lp.State != _lastPondState;
+            // Growing tiles rebuild every frame so the F/W/C scores stay live.
+            bool          tileChanged     = target is HeadFarmTile ht &&
+                                            (ht.State != _lastTileState || ht.State == HeadTileState.Growing);
+            bool          canSecondary    = target is ISecondaryInteractable s && s.CanSecondaryInteract;
             bool          secondaryChanged = canSecondary != _lastCanSecondary;
 
-            if (target == _lastTarget && !plotChanged && !pondChanged && !secondaryChanged)
+            // Harvest detection: same tile was the last target, was ReadyToHarvest, now is not.
+            if (target == _lastTarget &&
+                target is HeadFarmTile htHarvest &&
+                _lastTileState == HeadTileState.ReadyToHarvest &&
+                htHarvest.State != HeadTileState.ReadyToHarvest)
+            {
+                ShowHarvestReadout("Harvested head — " + htHarvest.LastHarvestQualityLabel + " quality");
+            }
+
+            if (target == _lastTarget && !plotChanged && !pondChanged && !tileChanged && !secondaryChanged)
                 return;
 
             _lastTarget       = target;
             _lastCanSecondary = canSecondary;
-            if (target is FarmPlot fp2) _lastPlotState = fp2.State;
-            if (target is LegPond  lp2) _lastPondState = lp2.State;
+            if (target is FarmPlot fp2)      _lastPlotState  = fp2.State;
+            if (target is LegPond  lp2)      _lastPondState  = lp2.State;
+            if (target is HeadFarmTile ht2)  _lastTileState  = ht2.State;
 
             if (target == null || !target.CanInteract)
             {
@@ -174,6 +205,9 @@ namespace OrcFarm.UI
                     ? "E:  Store head"
                     : "E:  Retrieve head  (" + storage.StoredCount + ")";
 
+            if (target is HeadFarmTile tile)
+                return "E:  " + tile.InteractPrompt;
+
             if (target is KeepInteractable ki)
             {
                 string prompt = "E:  Keep orc";
@@ -183,6 +217,29 @@ namespace OrcFarm.UI
             }
 
             return "E:  Interact";
+        }
+
+        // ── Harvest readout ────────────────────────────────────────────────────
+
+        private void ShowHarvestReadout(string message)
+        {
+            if (_harvestResultText == null)
+                return;
+
+            _harvestResultText.text = message;
+
+            if (_harvestClearCoroutine != null)
+                StopCoroutine(_harvestClearCoroutine);
+
+            _harvestClearCoroutine = StartCoroutine(ClearHarvestReadoutAfterDelay());
+        }
+
+        private IEnumerator ClearHarvestReadoutAfterDelay()
+        {
+            yield return _harvestClearWait;
+            if (_harvestResultText != null)
+                _harvestResultText.text = string.Empty;
+            _harvestClearCoroutine = null;
         }
 
         private static string GetFarmPlotAction(PlotState state) => state switch
