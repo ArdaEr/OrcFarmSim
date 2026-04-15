@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!1 &907713379874632413
+--- !u!1 &648561838402096635
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -8,9 +8,9 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 3274512634138277220}
-  - component: {fileID: 630971672626626491}
-  - component: {fileID: 889007238127131556}
+  - component: {fileID: 5794203121158966854}
+  - component: {fileID: 4822263768560366005}
+  - component: {fileID: 5766801116639717853}
   m_Layer: 0
   m_Name: Orc_SM_light_cavalry.004
   m_TagString: Untagged
@@ -18,36 +18,36 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &3274512634138277220
+--- !u!4 &5794203121158966854
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 907713379874632413}
+  m_GameObject: {fileID: 648561838402096635}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -0.14900003, y: 0, z: -0.368}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -0.325, y: 0, z: -0.884}
+  m_LocalScale: {x: 2.54, y: 2.5400002, z: 2.54}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 2321568110408723953}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!33 &630971672626626491
+--- !u!33 &4822263768560366005
 MeshFilter:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 907713379874632413}
-  m_Mesh: {fileID: 4300000, guid: 4cf8551888329f5499c1fc14a92f97bb, type: 2}
---- !u!23 &889007238127131556
+  m_GameObject: {fileID: 648561838402096635}
+  m_Mesh: {fileID: 603755670335790815, guid: 309439df8ee282c4298f0109f7157a52, type: 3}
+--- !u!23 &5766801116639717853
 MeshRenderer:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 907713379874632413}
+  m_GameObject: {fileID: 648561838402096635}
   m_Enabled: 1
   m_CastShadows: 1
   m_ReceiveShadows: 1
@@ -90,7 +90,7 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!1 &5632281028830813545
+--- !u!1 &1591987965375684714
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -98,9 +98,9 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 3524055359325249701}
-  - component: {fileID: 1495894508299657541}
-  - component: {fileID: 4282202928271101600}
+  - component: {fileID: 7090768862938069437}
+  - component: {fileID: 2724208212940568733}
+  - component: {fileID: 3987913994090253349}
   m_Layer: 0
   m_Name: Orc_SM_light_cavalry.002
   m_TagString: Untagged
@@ -108,36 +108,36 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &3524055359325249701
+--- !u!4 &7090768862938069437
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5632281028830813545}
+  m_GameObject: {fileID: 1591987965375684714}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -0.149, y: 0, z: -0.368}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -0.325, y: 0, z: -0.884}
+  m_LocalScale: {x: 2.54, y: 2.5400002, z: 2.54}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 2321568110408723953}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!33 &1495894508299657541
+--- !u!33 &2724208212940568733
 MeshFilter:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5632281028830813545}
-  m_Mesh: {fileID: 4300000, guid: 718b683fb11b30547986300f90ebee81, type: 2}
---- !u!23 &4282202928271101600
+  m_GameObject: {fileID: 1591987965375684714}
+  m_Mesh: {fileID: 2836021054148052278, guid: 309439df8ee282c4298f0109f7157a52, type: 3}
+--- !u!23 &3987913994090253349
 MeshRenderer:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5632281028830813545}
+  m_GameObject: {fileID: 1591987965375684714}
   m_Enabled: 1
   m_CastShadows: 1
   m_ReceiveShadows: 1
@@ -209,7 +209,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 3524055359325249701}
-  - {fileID: 3274512634138277220}
+  - {fileID: 7090768862938069437}
+  - {fileID: 5794203121158966854}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
