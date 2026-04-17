@@ -38,6 +38,11 @@ namespace OrcFarm.App
                  "Assign after adding the component to an appropriate GameObject.")]
         [SerializeField] private HarvestedHeadPool _headPool;
 
+        [Header("Hotbar item presenter")]
+        [Tooltip("HotbarItemPresenter MonoBehaviour on the player. " +
+                 "Auto-resolved from the scene if left unassigned.")]
+        [SerializeField] private HotbarItemPresenter _hotbarItemPresenter;
+
         protected override void Configure(IContainerBuilder builder)
         {
             ResolveSceneReferences();
@@ -53,6 +58,10 @@ namespace OrcFarm.App
                 // (circular dependency), so the pool is set via a public setter rather than
                 // [Inject] — no change to Carry.asmdef required.
                 _carryController.SetPool(c.Resolve<IHarvestedHeadPool>());
+
+                // Wire inventory into HotbarItemPresenter using the same setter pattern.
+                if (_hotbarItemPresenter != null)
+                    _hotbarItemPresenter.SetInventory(c.Resolve<IPlayerInventory>());
             });
 
             builder.RegisterMessageBroker<CropHarvestedSignal>(pipeOptions);
@@ -132,6 +141,7 @@ namespace OrcFarm.App
                 _legStorageContainers = FindObjectsByType<LegStorageContainer>(FindObjectsInactive.Include, FindObjectsSortMode.None);
 
             _headPool ??= FindFirstObjectByType<HarvestedHeadPool>(FindObjectsInactive.Include);
+            _hotbarItemPresenter ??= FindFirstObjectByType<HotbarItemPresenter>(FindObjectsInactive.Include);
         }
 
         private void ValidateSceneReferences()

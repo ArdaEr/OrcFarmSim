@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace OrcFarm.Inventory
 {
@@ -12,10 +13,14 @@ namespace OrcFarm.Inventory
     /// Starting item counts are configurable in the Inspector so playtests can begin
     /// with a known supply without extra setup code.
     ///
+    /// Hotbar slot selection is driven by this MonoBehaviour's <c>Update</c>:
+    ///   • Number keys 1–5 select the corresponding slot directly.
+    ///   • Scroll wheel up cycles to the previous slot (wraps 0 → 4).
+    ///   • Scroll wheel down cycles to the next slot (wraps 4 → 0).
+    ///
     /// Debug refill (Play Mode only):
-    ///   Set <c>_debugAddSeeds</c> / <c>_debugAddFertilizer</c> to the desired amounts,
-    ///   then tick <c>_applyDebugRefill</c> in the Inspector. The refill is applied
-    ///   immediately and the checkbox resets itself.
+    ///   Set the <c>_debugAdd*</c> amounts, then tick <c>_applyDebugRefill</c> in the
+    ///   Inspector. The refill is applied immediately and the checkbox resets itself.
     /// </summary>
     public sealed class PlayerInventory : MonoBehaviour, IPlayerInventory
     {
@@ -88,6 +93,44 @@ namespace OrcFarm.Inventory
                 _inventory.TryAdd(ItemType.FeedItem, _startingFeedItem);
         }
 
+        private void Update()
+        {
+            ReadHotbarInput();
+        }
+
+        // ── Hotbar input ───────────────────────────────────────────────────────
+
+        private void ReadHotbarInput()
+        {
+            Keyboard kb = Keyboard.current;
+            if (kb != null)
+            {
+                if      (kb.digit1Key.wasPressedThisFrame) _inventory.SetActiveHotbarSlot(0);
+                else if (kb.digit2Key.wasPressedThisFrame) _inventory.SetActiveHotbarSlot(1);
+                else if (kb.digit3Key.wasPressedThisFrame) _inventory.SetActiveHotbarSlot(2);
+                else if (kb.digit4Key.wasPressedThisFrame) _inventory.SetActiveHotbarSlot(3);
+                else if (kb.digit5Key.wasPressedThisFrame) _inventory.SetActiveHotbarSlot(4);
+            }
+
+            Mouse mouse = Mouse.current;
+            if (mouse != null)
+            {
+                float scrollY = mouse.scroll.ReadValue().y;
+                if (scrollY > 0f)
+                {
+                    // Scroll up → previous slot, wrapping 0 → 4.
+                    int prev = (_inventory.ActiveHotbarSlot - 1 + _inventory.HotbarSize) % _inventory.HotbarSize;
+                    _inventory.SetActiveHotbarSlot(prev);
+                }
+                else if (scrollY < 0f)
+                {
+                    // Scroll down → next slot, wrapping 4 → 0.
+                    int next = (_inventory.ActiveHotbarSlot + 1) % _inventory.HotbarSize;
+                    _inventory.SetActiveHotbarSlot(next);
+                }
+            }
+        }
+
 #if UNITY_EDITOR
         private void OnValidate()
         {
@@ -116,7 +159,7 @@ namespace OrcFarm.Inventory
         }
 #endif
 
-        // ── IPlayerInventory ───────────────────────────────────────────────────
+        // ── IPlayerInventory — totals ──────────────────────────────────────────
 
         /// <inheritdoc/>
         public int GetCount(ItemType type) => _inventory.GetCount(type);
@@ -129,5 +172,42 @@ namespace OrcFarm.Inventory
 
         /// <inheritdoc/>
         public bool TryAdd(ItemType type, int count = 1) => _inventory.TryAdd(type, count);
+
+        // ── IPlayerInventory — hotbar ──────────────────────────────────────────
+
+        /// <inheritdoc/>
+        public int SelectedSlotIndex => _inventory.ActiveHotbarSlot;
+
+        /// <inheritdoc/>
+        public HotbarSlot GetHotbarSlot(int index)
+        {
+            ItemStack stack = _inventory.GetHotbarSlot(index);
+            return new HotbarSlot(stack.Type, stack.Count);
+        }
+
+        /// <inheritdoc/>
+        public HotbarSlot GetSelectedSlot()
+        {
+            ItemStack stack = _inventory.GetActiveItem();
+            return new HotbarSlot(stack.Type, stack.Count);
+        }
+
+        /// <inheritdoc/>
+        public void SetSelectedSlot(int index)
+        {
+            _inventory.SetActiveHotbarSlot(Mathf.Clamp(index, 0, _inventory.HotbarSize - 1));
+        }
+
+        /// <inheritdoc/>
+        public bool TryConsumeFromSelectedSlot(int amount)
+        {
+            ItemStack active = _inventory.GetActiveItem();
+            if (active.IsEmpty || active.Count < amount)
+                return false;
+
+            // TryRemove drains hotbar before main. Since hotbar item types occupy exactly
+            // one hotbar slot each, this correctly removes from the active slot's type.
+            return _inventory.TryRemove(active.Type, amount);
+        }
     }
 }

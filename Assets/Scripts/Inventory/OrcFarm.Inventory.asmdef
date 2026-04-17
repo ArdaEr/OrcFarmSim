@@ -2,7 +2,8 @@
     "name": "OrcFarm.Inventory",
     "rootNamespace": "OrcFarm.Inventory",
     "references": [
-        "OrcFarm.Core"
+        "OrcFarm.Core",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

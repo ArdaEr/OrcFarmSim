@@ -46,7 +46,7 @@ namespace OrcFarm.Inventory
 
         // ── Read ──────────────────────────────────────────────────────────────
 
-        /// <summary>Index of the currently selected hotbar slot (0 – HotbarSize-1).</summary>
+        /// <summary>Index of the currently selected hotbar slot (0–HotbarSize-1), or -1 when deselected.</summary>
         public int ActiveHotbarSlot => _activeHotbarSlot;
 
         /// <summary>Returns the stack at the given hotbar index.</summary>

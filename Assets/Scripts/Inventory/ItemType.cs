@@ -26,5 +26,8 @@ namespace OrcFarm.Inventory
 
         /// <summary>The result of a successful leg pond harvest.</summary>
         HarvestedLeg = 6,
+
+        /// <summary>Water applied to head-farm tiles during Growing to restore water score.</summary>
+        WaterItem = 7,
     }
 }

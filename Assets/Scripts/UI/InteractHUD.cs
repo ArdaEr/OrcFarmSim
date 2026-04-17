@@ -52,6 +52,10 @@ namespace OrcFarm.UI
         [Tooltip("Seconds before the harvest readout is cleared. Matches assembly result timing.")]
         [SerializeField] private float _harvestResultClearDelay = 4f;
 
+        [Tooltip("Five TMP text elements for the hotbar display, assigned left to right (slots 1–5). " +
+                 "The selected slot is highlighted gold. Leave unassigned to skip hotbar display.")]
+        [SerializeField] private TextMeshProUGUI[] _hotbarSlotTexts;
+
         private IInteractionService _interactionService;
         private ICarryController    _carry;
         private IPlayerInventory    _inventory;
@@ -76,6 +80,15 @@ namespace OrcFarm.UI
 
         private WaitForSeconds _harvestClearWait;
         private Coroutine      _harvestClearCoroutine;
+
+        // ── Hotbar display ─────────────────────────────────────────────────────
+
+        private const int HotbarDisplaySize = 5;
+
+        // -1 forces a full rebuild on the first frame after injection.
+        private int        _lastHotbarSelected  = -1;
+        private ItemType[] _cachedHotbarTypes   = new ItemType[HotbarDisplaySize];
+        private int[]      _cachedHotbarCounts  = new int[HotbarDisplaySize];
 
         // ── VContainer injection ───────────────────────────────────────────────
 
@@ -111,6 +124,25 @@ namespace OrcFarm.UI
                 _harvestResultText.text = string.Empty;
 
             _harvestClearWait = new WaitForSeconds(_harvestResultClearDelay);
+
+            if (_hotbarSlotTexts != null && _hotbarSlotTexts.Length == HotbarDisplaySize)
+            {
+                for (int i = 0; i < HotbarDisplaySize; i++)
+                {
+                    if (_hotbarSlotTexts[i] != null)
+                        _hotbarSlotTexts[i].text = string.Empty;
+                    else
+                        Debug.LogError(
+                            "[InteractHUD] _hotbarSlotTexts[" + i + "] is null. " +
+                            "Assign all 5 hotbar TMP elements in the Inspector.", this);
+                }
+            }
+            else if (_hotbarSlotTexts != null)
+            {
+                Debug.LogError(
+                    "[InteractHUD] _hotbarSlotTexts must contain exactly " + HotbarDisplaySize +
+                    " elements. Found " + _hotbarSlotTexts.Length + ".", this);
+            }
         }
 
         // Compares current state against cached values; rebuilds text only on change.
@@ -133,6 +165,7 @@ namespace OrcFarm.UI
             UpdateStatus();
             UpdateInventory();
             UpdatePlotStatus();
+            UpdateHotbar();
         }
 
         // ── Prompt ─────────────────────────────────────────────────────────────
@@ -326,6 +359,60 @@ namespace OrcFarm.UI
                                 + "\nFertilizer:  " + fertilizer
                                 + "\nFeed:        " + feedItem
                                 + "\nLeg Fry:     " + legFry;
+        }
+
+        // ── Hotbar display ─────────────────────────────────────────────────────
+
+        private void UpdateHotbar()
+        {
+            if (_hotbarSlotTexts == null || _hotbarSlotTexts.Length < HotbarDisplaySize)
+                return;
+            if (_inventory == null)
+                return;
+
+            int  selected = _inventory.SelectedSlotIndex;
+            bool changed  = selected != _lastHotbarSelected;
+
+            // Check each slot for content changes; exit early on first mismatch.
+            if (!changed)
+            {
+                for (int i = 0; i < HotbarDisplaySize; i++)
+                {
+                    HotbarSlot s = _inventory.GetHotbarSlot(i);
+                    if (s.SlotItemType != _cachedHotbarTypes[i] || s.Count != _cachedHotbarCounts[i])
+                    {
+                        changed = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!changed)
+                return;
+
+            _lastHotbarSelected = selected;
+            for (int i = 0; i < HotbarDisplaySize; i++)
+            {
+                if (_hotbarSlotTexts[i] == null)
+                    continue;
+
+                HotbarSlot s = _inventory.GetHotbarSlot(i);
+                _cachedHotbarTypes[i]  = s.SlotItemType;
+                _cachedHotbarCounts[i] = s.Count;
+
+                // String concat here is intentional — only runs on state change, not per frame (§3.3).
+                string content = BuildHotbarSlotLabel(i + 1, s);
+                _hotbarSlotTexts[i].text = (i == selected)
+                    ? "<color=#FFD700>" + content + "</color>"
+                    : content;
+            }
+        }
+
+        private static string BuildHotbarSlotLabel(int slotNumber, HotbarSlot slot)
+        {
+            return slot.IsEmpty
+                ? slotNumber + "\nEmpty"
+                : slotNumber + "\n" + slot.SlotItemType + "\n\u00d7" + slot.Count;
         }
     }
 }

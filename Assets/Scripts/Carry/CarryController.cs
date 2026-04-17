@@ -47,7 +47,8 @@ namespace OrcFarm.Carry
 
         private HarvestedHead      _carried;
         private HarvestedLeg       _carriedLeg;
-        private IHarvestedHeadPool _pool;
+        private IHarvestedHeadPool  _pool;
+        private HotbarItemPresenter _hotbarPresenter;
 
         /// <inheritdoc/>
         public bool IsCarrying    => _carried != null || _carriedLeg != null;
@@ -69,6 +70,8 @@ namespace OrcFarm.Carry
             if (_legCarryAnchor == null)
                 Debug.LogError(
                     $"[CarryController] _legCarryAnchor not assigned on '{gameObject.name}'.", this);
+
+            _hotbarPresenter = GetComponent<HotbarItemPresenter>();
         }
 
         private void OnEnable()  => _dropAction.Enable();
@@ -108,6 +111,7 @@ namespace OrcFarm.Carry
 
             _carried = head;
             _carried.AttachToAnchor(_headCarryAnchor);
+            _hotbarPresenter?.HideVisual();
         }
 
         /// <summary>
@@ -122,6 +126,7 @@ namespace OrcFarm.Carry
 
             _carriedLeg = leg;
             _carriedLeg.AttachToAnchor(_legCarryAnchor);
+            _hotbarPresenter?.HideVisual();
         }
 
         /// <summary>
@@ -139,6 +144,7 @@ namespace OrcFarm.Carry
             HarvestedHead head = _carried;
             _carried = null;          // clear before StoreInto in case of re-entrancy
             head.StoreInto(storageRoot);
+            _hotbarPresenter?.RestoreAfterDrop();
             return true;
         }
 
@@ -156,6 +162,7 @@ namespace OrcFarm.Carry
             HarvestedLeg leg = _carriedLeg;
             _carriedLeg = null;     // clear before StoreInto in case of re-entrancy
             leg.StoreInto(storageRoot);
+            _hotbarPresenter?.RestoreAfterDrop();
             return true;
         }
 
@@ -193,6 +200,8 @@ namespace OrcFarm.Carry
                 _carriedLeg = null;
                 leg.DetachToWorld(dropPosition, impulse);
             }
+
+            _hotbarPresenter?.RestoreAfterDrop();
         }
 
         /// <summary>
@@ -213,6 +222,7 @@ namespace OrcFarm.Carry
                 GameObject go = _carried.gameObject;
                 _carried = null;
                 _pool.Return(go);
+                _hotbarPresenter?.RestoreAfterDrop();
             }
             else if (_carriedLeg != null)
             {

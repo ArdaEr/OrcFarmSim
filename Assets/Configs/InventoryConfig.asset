@@ -12,5 +12,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c6ff3e271878a6745b1f09639cadfc20, type: 3}
   m_Name: InventoryConfig
   m_EditorClassIdentifier: OrcFarm.Inventory::OrcFarm.Inventory.InventoryConfig
-  _hotbarSize: 2
+  _hotbarSize: 5
   _mainInventorySize: 5
