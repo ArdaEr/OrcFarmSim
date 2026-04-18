@@ -56,6 +56,13 @@ namespace OrcFarm.UI
                  "The selected slot is highlighted gold. Leave unassigned to skip hotbar display.")]
         [SerializeField] private TextMeshProUGUI[] _hotbarSlotTexts;
 
+        [Tooltip("Optional. Shows brief warning messages (e.g. 'Inventory is full').")]
+        [SerializeField] private TextMeshProUGUI _warningText;
+
+        [Tooltip("Seconds the warning stays visible before auto-clearing.")]
+        [Min(0.1f)]
+        [SerializeField] private float _warningClearDelay = 2f;
+
         private IInteractionService _interactionService;
         private ICarryController    _carry;
         private IPlayerInventory    _inventory;
@@ -80,6 +87,11 @@ namespace OrcFarm.UI
 
         private WaitForSeconds _harvestClearWait;
         private Coroutine      _harvestClearCoroutine;
+
+        // ── Warning display ────────────────────────────────────────────────────
+
+        private WaitForSeconds _warningClearWait;
+        private Coroutine      _warningClearCoroutine;
 
         // ── Hotbar display ─────────────────────────────────────────────────────
 
@@ -123,7 +135,11 @@ namespace OrcFarm.UI
             if (_harvestResultText != null)
                 _harvestResultText.text = string.Empty;
 
-            _harvestClearWait = new WaitForSeconds(_harvestResultClearDelay);
+            _harvestClearWait  = new WaitForSeconds(_harvestResultClearDelay);
+            _warningClearWait  = new WaitForSeconds(_warningClearDelay);
+
+            if (_warningText != null)
+                _warningText.text = string.Empty;
 
             if (_hotbarSlotTexts != null && _hotbarSlotTexts.Length == HotbarDisplaySize)
             {
@@ -233,6 +249,9 @@ namespace OrcFarm.UI
             if (target is HarvestedLeg)
                 return "E:  Pick up leg";
 
+            if (target is OrcFarm.Carry.DroppedHotbarItem dropped)
+                return "E:  Pick up " + GetItemDisplayName(dropped.ItemType);
+
             if (target is HeadStorageContainer storage)
                 return _carry.IsCarrying
                     ? "E:  Store head"
@@ -275,6 +294,33 @@ namespace OrcFarm.UI
             _harvestClearCoroutine = null;
         }
 
+        // ── Warning display ────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Shows a brief warning message. Auto-clears after <c>_warningClearDelay</c> seconds.
+        /// Called by RootLifetimeScope's inventory-full callback wired into HotbarItemPresenter.
+        /// </summary>
+        public void ShowInventoryFullWarning()
+        {
+            if (_warningText == null)
+                return;
+
+            _warningText.text = "Inventory is full";
+
+            if (_warningClearCoroutine != null)
+                StopCoroutine(_warningClearCoroutine);
+
+            _warningClearCoroutine = StartCoroutine(ClearWarningAfterDelay());
+        }
+
+        private IEnumerator ClearWarningAfterDelay()
+        {
+            yield return _warningClearWait;
+            if (_warningText != null)
+                _warningText.text = string.Empty;
+            _warningClearCoroutine = null;
+        }
+
         private static string GetFarmPlotAction(PlotState state) => state switch
         {
             PlotState.Empty          => "Prepare plot",
@@ -284,6 +330,16 @@ namespace OrcFarm.UI
             PlotState.ReadyToHarvest => "Harvest head",
             PlotState.FailedCrop     => "Clear failed crop",
             _                        => string.Empty,
+        };
+
+        private static string GetItemDisplayName(OrcFarm.Inventory.ItemType type) => type switch
+        {
+            OrcFarm.Inventory.ItemType.HeadSeed   => "Head Seed",
+            OrcFarm.Inventory.ItemType.Fertilizer => "Fertilizer",
+            OrcFarm.Inventory.ItemType.FeedItem   => "Feed",
+            OrcFarm.Inventory.ItemType.LegFry     => "Leg Fry",
+            OrcFarm.Inventory.ItemType.WaterItem  => "Water",
+            _                                     => type.ToString(),
         };
 
         private static string GetLegPondAction(LegPondState state) => state switch

@@ -41,6 +41,12 @@ namespace OrcFarm.Inventory
         void SetSelectedSlot(int index);
 
         /// <summary>
+        /// Clears the hotbar selection. <see cref="SelectedSlotIndex"/> returns -1 until a
+        /// slot is selected again. <see cref="GetSelectedSlot"/> returns an empty slot.
+        /// </summary>
+        void Deselect();
+
+        /// <summary>
         /// Attempts to consume <paramref name="amount"/> items from the currently
         /// selected hotbar slot. Returns false if the slot is empty or the count is
         /// insufficient. Does not fall through to other slots.

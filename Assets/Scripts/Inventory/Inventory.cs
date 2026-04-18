@@ -65,8 +65,16 @@ namespace OrcFarm.Inventory
             return _main[index];
         }
 
-        /// <summary>Shorthand for the stack in the currently selected hotbar slot.</summary>
-        public ItemStack GetActiveItem() => _hotbar[_activeHotbarSlot];
+        /// <summary>
+        /// Shorthand for the stack in the currently selected hotbar slot.
+        /// Returns <see cref="ItemStack.Empty"/> when no slot is selected (<see cref="ActiveHotbarSlot"/> == -1).
+        /// </summary>
+        public ItemStack GetActiveItem()
+        {
+            if (_activeHotbarSlot < 0)
+                return ItemStack.Empty;
+            return _hotbar[_activeHotbarSlot];
+        }
 
         /// <summary>Total count of <paramref name="type"/> across every slot.</summary>
         public int GetCount(ItemType type)
@@ -125,6 +133,12 @@ namespace OrcFarm.Inventory
             GuardHotbarIndex(index);
             _activeHotbarSlot = index;
         }
+
+        /// <summary>
+        /// Clears the hotbar selection. <see cref="ActiveHotbarSlot"/> becomes -1 and
+        /// <see cref="GetActiveItem"/> returns <see cref="ItemStack.Empty"/>.
+        /// </summary>
+        public void Deselect() => _activeHotbarSlot = -1;
 
         // ── Private helpers ───────────────────────────────────────────────────
 

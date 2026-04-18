@@ -59,9 +59,15 @@ namespace OrcFarm.App
                 // [Inject] — no change to Carry.asmdef required.
                 _carryController.SetPool(c.Resolve<IHarvestedHeadPool>());
 
-                // Wire inventory into HotbarItemPresenter using the same setter pattern.
+                // Wire inventory and inventory-full callback into HotbarItemPresenter.
+                // SetInventory must be called first — it creates the drop pools that
+                // SetInventoryFullCallback iterates.
                 if (_hotbarItemPresenter != null)
+                {
                     _hotbarItemPresenter.SetInventory(c.Resolve<IPlayerInventory>());
+                    _hotbarItemPresenter.SetInventoryFullCallback(
+                        () => _interactHud.ShowInventoryFullWarning());
+                }
             });
 
             builder.RegisterMessageBroker<CropHarvestedSignal>(pipeOptions);

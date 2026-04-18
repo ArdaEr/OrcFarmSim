@@ -105,11 +105,11 @@ namespace OrcFarm.Inventory
             Keyboard kb = Keyboard.current;
             if (kb != null)
             {
-                if      (kb.digit1Key.wasPressedThisFrame) _inventory.SetActiveHotbarSlot(0);
-                else if (kb.digit2Key.wasPressedThisFrame) _inventory.SetActiveHotbarSlot(1);
-                else if (kb.digit3Key.wasPressedThisFrame) _inventory.SetActiveHotbarSlot(2);
-                else if (kb.digit4Key.wasPressedThisFrame) _inventory.SetActiveHotbarSlot(3);
-                else if (kb.digit5Key.wasPressedThisFrame) _inventory.SetActiveHotbarSlot(4);
+                if      (kb.digit1Key.wasPressedThisFrame) SelectOrDeselect(0);
+                else if (kb.digit2Key.wasPressedThisFrame) SelectOrDeselect(1);
+                else if (kb.digit3Key.wasPressedThisFrame) SelectOrDeselect(2);
+                else if (kb.digit4Key.wasPressedThisFrame) SelectOrDeselect(3);
+                else if (kb.digit5Key.wasPressedThisFrame) SelectOrDeselect(4);
             }
 
             Mouse mouse = Mouse.current;
@@ -196,6 +196,18 @@ namespace OrcFarm.Inventory
         public void SetSelectedSlot(int index)
         {
             _inventory.SetActiveHotbarSlot(Mathf.Clamp(index, 0, _inventory.HotbarSize - 1));
+        }
+
+        /// <inheritdoc/>
+        public void Deselect() => _inventory.Deselect();
+
+        // Selects the slot if it is not already selected; deselects if it is.
+        private void SelectOrDeselect(int index)
+        {
+            if (_inventory.ActiveHotbarSlot == index)
+                _inventory.Deselect();
+            else
+                _inventory.SetActiveHotbarSlot(index);
         }
 
         /// <inheritdoc/>
