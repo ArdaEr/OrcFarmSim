@@ -23,6 +23,12 @@ namespace OrcFarm.Player
         /// <inheritdoc/>
         public bool InteractPressed => _wrapper.InteractPressed;
 
+        /// <inheritdoc/>
+        public bool JumpPressed => _wrapper.JumpPressed;
+
+        /// <inheritdoc/>
+        public bool RunHeld => _wrapper.RunHeld;
+
         private void Awake()     => _wrapper = new PlayerInputWrapper();
         private void OnDestroy() => _wrapper.Dispose();
     }

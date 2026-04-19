@@ -11,14 +11,17 @@ namespace OrcFarm.Player
     /// component zeroed and re-normalized before use, so the player does not
     /// gain vertical momentum when looking up or down.
     ///
-    /// Gravity is applied; no jumping or ability logic is included here.
+    /// Gravity and jump impulse are applied here because this component owns the
+    /// vertical velocity used by the CharacterController.
     /// </summary>
     [RequireComponent(typeof(PlayerInputSource))]
     [RequireComponent(typeof(CharacterController))]
     public sealed class PlayerMover : MonoBehaviour
     {
-        [SerializeField] private float _speed   = 4f;
-        [SerializeField] private float _gravity = -9.81f;
+        [SerializeField] private float _speed    = 4f;
+        [SerializeField] private float _runSpeed = 7f;
+        [SerializeField] private float _jumpHeight = 1.5f;
+        [SerializeField] private float _gravity  = -9.81f;
 
         private const float GroundedSnapVelocity = -2f;
 
@@ -45,6 +48,9 @@ namespace OrcFarm.Player
             if (_cc.isGrounded && _verticalVelocity < 0f)
                 _verticalVelocity = GroundedSnapVelocity; // small constant keeps the controller grounded
 
+            if (_cc.isGrounded && _input.JumpPressed)
+                _verticalVelocity = Mathf.Sqrt(_jumpHeight * -2f * _gravity);
+
             _verticalVelocity += _gravity * Time.deltaTime;
 
             // Flatten forward so the player doesn't fly when the camera tilts
@@ -54,7 +60,7 @@ namespace OrcFarm.Player
 
             Vector2 move   = _input.MoveInput;
             Vector3 motion = transform.right * move.x + forward * move.y;
-            motion        *= _speed;
+            motion        *= _input.RunHeld ? _runSpeed : _speed;
             motion.y       = _verticalVelocity;
 
             _cc.Move(motion * Time.deltaTime);

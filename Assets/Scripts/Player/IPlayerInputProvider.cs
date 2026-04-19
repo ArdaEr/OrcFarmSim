@@ -17,5 +17,11 @@ namespace OrcFarm.Player
 
         /// <summary>True on the frame the interact binding was pressed.</summary>
         bool InteractPressed { get; }
+
+        /// <summary>True on the frame the jump binding was pressed.</summary>
+        bool JumpPressed { get; }
+
+        /// <summary>True while the run binding is held.</summary>
+        bool RunHeld { get; }
     }
 }
