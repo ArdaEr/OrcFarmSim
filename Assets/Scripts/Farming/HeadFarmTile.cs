@@ -38,6 +38,18 @@ namespace OrcFarm.Farming
         [Tooltip("Scene CarryController used to initialize harvested heads so the player can pick them up.")]
         [SerializeField] private CarryController _carryController;
 
+        [Header("Growth Visual")]
+        [Tooltip("Object that scales while this tile is Growing. Optional; leave empty for no crop growth visual.")]
+        [SerializeField] private Transform _growthVisual;
+
+        [Tooltip("Scale used when Growing begins.")]
+        [Min(0f)]
+        [SerializeField] private float _growthVisualStartScale = 0.2f;
+
+        [Tooltip("Scale used once the tile reaches ReadyToHarvest.")]
+        [Min(0f)]
+        [SerializeField] private float _growthVisualHarvestScale = 1f;
+
 #if UNITY_EDITOR
         [Header("Debug  —  Play Mode only")]
         [Tooltip("Forces a Growing tile to ReadyToHarvest immediately. Auto-resets after firing.")]
@@ -49,9 +61,14 @@ namespace OrcFarm.Farming
 
         // ── Private state ──────────────────────────────────────────────────────
 
-        private int  _row;
-        private int  _column;
-        private bool _indexAssigned;
+        [HideInInspector]
+        [SerializeField] private int _row;
+
+        [HideInInspector]
+        [SerializeField] private int _column;
+
+        [HideInInspector]
+        [SerializeField] private bool _indexAssigned;
 
         private float              _timer;
         private HeadTileState      _tileState = HeadTileState.Empty;
@@ -87,6 +104,23 @@ namespace OrcFarm.Farming
 
         /// <inheritdoc/>
         public void ResetTimer() => _timer = 0f;
+
+        /// <inheritdoc/>
+        public void ResetGrowthVisual() => SetGrowthVisualProgress(0f);
+
+        /// <inheritdoc/>
+        public void SetGrowthVisualProgress(float progress)
+        {
+            if (_growthVisual == null)
+                return;
+
+            float scale = Mathf.Lerp(
+                _growthVisualStartScale,
+                _growthVisualHarvestScale,
+                Mathf.Clamp01(progress));
+
+            _growthVisual.localScale = Vector3.one * scale;
+        }
 
         /// <inheritdoc/>
         public bool HasItem(ItemType type) =>
@@ -217,6 +251,25 @@ namespace OrcFarm.Farming
             _indexAssigned = true;
         }
 
+        /// <summary>
+        /// Assigns scene references supplied by the owning <see cref="HeadFarmPlot"/>
+        /// when it generates or refreshes this tile in Edit Mode.
+        /// </summary>
+        public void AssignSceneReferences(
+            HarvestedHeadPool headPool,
+            PlayerInventory inventory,
+            CarryController carryController)
+        {
+            if (headPool != null)
+                _headPool = headPool;
+
+            if (inventory != null)
+                _inventory = inventory;
+
+            if (carryController != null)
+                _carryController = carryController;
+        }
+
         // ── Unity lifecycle ────────────────────────────────────────────────────
 
         private void Awake()
@@ -260,6 +313,9 @@ namespace OrcFarm.Farming
                 enabled = false;
                 return;
             }
+
+            _growthVisualStartScale   = Mathf.Max(0f, _growthVisualStartScale);
+            _growthVisualHarvestScale = Mathf.Max(_growthVisualStartScale, _growthVisualHarvestScale);
 
             _data.Validate();
 

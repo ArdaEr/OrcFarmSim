@@ -49,6 +49,7 @@ namespace OrcFarm.Farming
         {
             _ctx.ResetTimer();
             _ctx.ResetConditionScores();
+            _ctx.ResetGrowthVisual();
         }
 
         public void OnExit() { }
@@ -59,6 +60,7 @@ namespace OrcFarm.Farming
 
             // Advance grow timer.
             _ctx.IncrementTimer(dt);
+            _ctx.SetGrowthVisualProgress(_ctx.Timer / _ctx.Data.GrowDuration);
 
             // Decay all three scores — clamp handled inside each setter.
             _ctx.SetFeedScore (_ctx.FeedScore  - _ctx.Data.FeedDecayRate  * dt);

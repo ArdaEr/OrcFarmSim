@@ -1,0 +1,774 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &8951321563189317970
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1348296460524994538}
+  - component: {fileID: 779402976161383913}
+  m_Layer: 0
+  m_Name: HeadFarmSlot
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1348296460524994538
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8951321563189317970}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 11.0649, y: 0, z: 33.61853}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 1755364940775355181}
+  - {fileID: 3681121348097380548}
+  - {fileID: 1552753509864301326}
+  - {fileID: 601614603267178794}
+  - {fileID: 1071395409039752490}
+  - {fileID: 4944011461838937420}
+  - {fileID: 3440192793892126960}
+  - {fileID: 7498879363907097505}
+  - {fileID: 1430062528780356574}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &779402976161383913
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8951321563189317970}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 04b731ce18ade1749822a541a960382c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: OrcFarm.Farming::OrcFarm.Farming.HeadFarmPlot
+  _tilePrefab: {fileID: 6011308483063186897, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+  _rows: 3
+  _columns: 3
+  _tileSpacing: {x: 1.5, y: 1.5}
+  _tiles:
+  - {fileID: 7323553543937676560}
+  - {fileID: 5686861488242833145}
+  - {fileID: 7526164992028067123}
+  - {fileID: 8477867364242564887}
+  - {fileID: 8295751781014559511}
+  - {fileID: 4135036743705246577}
+  - {fileID: 5926797746155497165}
+  - {fileID: 1580602066732266908}
+  - {fileID: 7937216607299792355}
+--- !u!1001 &84515135328690972
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1348296460524994538}
+    m_Modifications:
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -3
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6011308483063186897, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: _row
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 8899310346703550373, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_Name
+      value: Tile 3-1
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+--- !u!4 &3440192793892126960 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+  m_PrefabInstance: {fileID: 84515135328690972}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &5926797746155497165 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 6011308483063186897, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+  m_PrefabInstance: {fileID: 84515135328690972}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7805c574de0b8d04eafec18d53457e85, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: OrcFarm.Farming::OrcFarm.Farming.HeadFarmTile
+--- !u!1001 &2127879716417712936
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1348296460524994538}
+    m_Modifications:
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 1.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6011308483063186897, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: _column
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8899310346703550373, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_Name
+      value: Tile 1-2
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+--- !u!4 &3681121348097380548 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+  m_PrefabInstance: {fileID: 2127879716417712936}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &5686861488242833145 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 6011308483063186897, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+  m_PrefabInstance: {fileID: 2127879716417712936}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7805c574de0b8d04eafec18d53457e85, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: OrcFarm.Farming::OrcFarm.Farming.HeadFarmTile
+--- !u!1001 &2327265333618532038
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1348296460524994538}
+    m_Modifications:
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 1.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -1.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6011308483063186897, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: _row
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6011308483063186897, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: _column
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8899310346703550373, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_Name
+      value: Tile 2-2
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+--- !u!4 &1071395409039752490 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+  m_PrefabInstance: {fileID: 2327265333618532038}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &8295751781014559511 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 6011308483063186897, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+  m_PrefabInstance: {fileID: 2327265333618532038}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7805c574de0b8d04eafec18d53457e85, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: OrcFarm.Farming::OrcFarm.Farming.HeadFarmTile
+--- !u!1001 &2795356874865124038
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1348296460524994538}
+    m_Modifications:
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -1.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6011308483063186897, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: _row
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8899310346703550373, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_Name
+      value: Tile 2-1
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+--- !u!4 &601614603267178794 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+  m_PrefabInstance: {fileID: 2795356874865124038}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &8477867364242564887 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 6011308483063186897, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+  m_PrefabInstance: {fileID: 2795356874865124038}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7805c574de0b8d04eafec18d53457e85, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: OrcFarm.Farming::OrcFarm.Farming.HeadFarmTile
+--- !u!1001 &3949102797319000257
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1348296460524994538}
+    m_Modifications:
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8899310346703550373, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_Name
+      value: Tile 1-1
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+--- !u!4 &1755364940775355181 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+  m_PrefabInstance: {fileID: 3949102797319000257}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &7323553543937676560 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 6011308483063186897, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+  m_PrefabInstance: {fileID: 3949102797319000257}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7805c574de0b8d04eafec18d53457e85, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: OrcFarm.Farming::OrcFarm.Farming.HeadFarmTile
+--- !u!1001 &4259906172403204322
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1348296460524994538}
+    m_Modifications:
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6011308483063186897, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: _column
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 8899310346703550373, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_Name
+      value: Tile 1-3
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+--- !u!4 &1552753509864301326 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+  m_PrefabInstance: {fileID: 4259906172403204322}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &7526164992028067123 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 6011308483063186897, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+  m_PrefabInstance: {fileID: 4259906172403204322}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7805c574de0b8d04eafec18d53457e85, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: OrcFarm.Farming::OrcFarm.Farming.HeadFarmTile
+--- !u!1001 &4416585669508950066
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1348296460524994538}
+    m_Modifications:
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -3
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6011308483063186897, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: _row
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 6011308483063186897, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: _column
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 8899310346703550373, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_Name
+      value: Tile 3-3
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+--- !u!4 &1430062528780356574 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+  m_PrefabInstance: {fileID: 4416585669508950066}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &7937216607299792355 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 6011308483063186897, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+  m_PrefabInstance: {fileID: 4416585669508950066}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7805c574de0b8d04eafec18d53457e85, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: OrcFarm.Farming::OrcFarm.Farming.HeadFarmTile
+--- !u!1001 &5080931209502339149
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1348296460524994538}
+    m_Modifications:
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 1.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -3
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6011308483063186897, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: _row
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 6011308483063186897, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: _column
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8899310346703550373, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_Name
+      value: Tile 3-2
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+--- !u!114 &1580602066732266908 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 6011308483063186897, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+  m_PrefabInstance: {fileID: 5080931209502339149}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7805c574de0b8d04eafec18d53457e85, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: OrcFarm.Farming::OrcFarm.Farming.HeadFarmTile
+--- !u!4 &7498879363907097505 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+  m_PrefabInstance: {fileID: 5080931209502339149}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1001 &7642308631861083808
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1348296460524994538}
+    m_Modifications:
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -1.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6011308483063186897, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: _row
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6011308483063186897, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: _column
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 8899310346703550373, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+      propertyPath: m_Name
+      value: Tile 2-3
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+--- !u!114 &4135036743705246577 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 6011308483063186897, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+  m_PrefabInstance: {fileID: 7642308631861083808}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7805c574de0b8d04eafec18d53457e85, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: OrcFarm.Farming::OrcFarm.Farming.HeadFarmTile
+--- !u!4 &4944011461838937420 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
+  m_PrefabInstance: {fileID: 7642308631861083808}
+  m_PrefabAsset: {fileID: 0}

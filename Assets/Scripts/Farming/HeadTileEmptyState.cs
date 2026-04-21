@@ -9,7 +9,7 @@ namespace OrcFarm.Farming
 
         public bool   CanInteract    => true;
         public string InteractPrompt => "Till soil";
-        public void   OnEnter()      { }
+        public void   OnEnter()      => _ctx.ResetGrowthVisual();
         public void   OnExit()       { }
         public void   Update()       { }
         public void   OnInteract()   => _ctx.TransitionTo(HeadTileState.Tilled);

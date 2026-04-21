@@ -14,7 +14,7 @@ namespace OrcFarm.Farming
 
         public bool   CanInteract    => true;
         public string InteractPrompt => "Harvest";
-        public void   OnEnter()      { }
+        public void   OnEnter()      => _ctx.SetGrowthVisualProgress(1f);
         public void   OnExit()       { }
         public void   Update()       { }
 

@@ -21,6 +21,12 @@ namespace OrcFarm.Farming
         /// <summary>Resets the state timer to zero. Call in OnEnter of timed states.</summary>
         void ResetTimer();
 
+        /// <summary>Resets the crop visual to its starting growth scale.</summary>
+        void ResetGrowthVisual();
+
+        /// <summary>Scales the crop visual to match current growth progress, clamped 0-1.</summary>
+        void SetGrowthVisualProgress(float progress);
+
         /// <summary>True if the player's inventory contains at least one <paramref name="type"/>.</summary>
         bool HasItem(ItemType type);
 
