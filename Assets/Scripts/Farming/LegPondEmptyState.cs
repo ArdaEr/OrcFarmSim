@@ -1,8 +1,10 @@
-using OrcFarm.Inventory;
-
 namespace OrcFarm.Farming
 {
-    /// <summary>Pond is empty. Stocking consumes one LegFry and moves to Stocked.</summary>
+    /// <summary>
+    /// Pond is empty. The player must be carrying a <see cref="LegFryItem"/> to stock it.
+    /// On interaction: reads the item's tier, populates fish data, consumes the item,
+    /// and transitions to <see cref="LegPondState.Stocked"/>.
+    /// </summary>
     internal sealed class LegPondEmptyState : ILegPondState
     {
         private readonly ILegPondStateContext _ctx;
@@ -16,10 +18,24 @@ namespace OrcFarm.Farming
 
         public void OnInteract()
         {
-            if (!_ctx.TryConsumeItem(ItemType.LegFry))
+            LegFryItem carried = _ctx.CarriedLegFry;
+            if (carried == null)
+            {
+                LogNotCarrying();
                 return;
+            }
 
+            LegFryTier tier = carried.Tier;
+            _ctx.ConsumeCarriedLegFry();
+            _ctx.InitializeFish(tier);
             _ctx.TransitionTo(LegPondState.Stocked);
+        }
+
+        [System.Diagnostics.Conditional("UNITY_EDITOR")]
+        private void LogNotCarrying()
+        {
+            UnityEngine.Debug.Log(
+                "[LegPondEmptyState] Cannot stock — player is not carrying a LegFryItem.");
         }
     }
 }
