@@ -25,7 +25,7 @@ namespace OrcFarm.App
         [SerializeField] private PlayerInteractor _playerInteractor;
         [SerializeField] private PlayerMover      _playerMover;
         [SerializeField] private PlayerLook       _playerLook;
-        [SerializeField] private FarmPlot[]       _farmPlots;
+        [SerializeField] private HeadFarmPlot[]   _headFarmPlots;
 
         [Header("Injected scene consumers (continued)")]
         [SerializeField] private OrcFarm.UI.InteractHUD          _interactHud;
@@ -82,12 +82,6 @@ namespace OrcFarm.App
             builder.RegisterComponent(_playerLook);
             builder.RegisterComponent(_interactHud);
 
-            for (int i = 0; i < _farmPlots.Length; i++)
-            {
-                if (_farmPlots[i] != null)
-                    builder.RegisterComponent(_farmPlots[i]);
-            }
-
             // Register the scene-placed MonoBehaviour pool as IHarvestedHeadPool.
             // Both HarvestCoordinator (constructor injection) and CarryController
             // (RegisterBuildCallback above) receive this instance.
@@ -134,8 +128,8 @@ namespace OrcFarm.App
             _playerMover      ??= FindFirstObjectByType<PlayerMover>(FindObjectsInactive.Include);
             _playerLook       ??= FindFirstObjectByType<PlayerLook>(FindObjectsInactive.Include);
 
-            if (_farmPlots == null || _farmPlots.Length == 0)
-                _farmPlots = FindObjectsByType<FarmPlot>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            if (_headFarmPlots == null || _headFarmPlots.Length == 0)
+                _headFarmPlots = FindObjectsByType<HeadFarmPlot>(FindObjectsInactive.Include, FindObjectsSortMode.None);
 
             if (_legPonds == null || _legPonds.Length == 0)
                 _legPonds = FindObjectsByType<LegPond>(FindObjectsInactive.Include, FindObjectsSortMode.None);
@@ -166,8 +160,8 @@ namespace OrcFarm.App
                 throw new InvalidOperationException("[RootLifetimeScope] Missing PlayerMover.");
             if (_playerLook == null)
                 throw new InvalidOperationException("[RootLifetimeScope] Missing PlayerLook.");
-            if (_farmPlots == null || _farmPlots.Length == 0)
-                throw new InvalidOperationException("[RootLifetimeScope] Missing FarmPlot.");
+            if (_headFarmPlots == null || _headFarmPlots.Length == 0)
+                throw new InvalidOperationException("[RootLifetimeScope] Missing HeadFarmPlot.");
             if (_headPool == null)
                 throw new InvalidOperationException("[RootLifetimeScope] Missing HarvestedHeadPool.");
         }

@@ -57,16 +57,9 @@ MonoBehaviour:
   _rows: 3
   _columns: 3
   _tileSpacing: {x: 1.5, y: 1.5}
-  _tiles:
-  - {fileID: 7323553543937676560}
-  - {fileID: 5686861488242833145}
-  - {fileID: 7526164992028067123}
-  - {fileID: 8477867364242564887}
-  - {fileID: 8295751781014559511}
-  - {fileID: 4135036743705246577}
-  - {fileID: 5926797746155497165}
-  - {fileID: 1580602066732266908}
-  - {fileID: 7937216607299792355}
+  _headPool: {fileID: 0}
+  _inventory: {fileID: 0}
+  _carryController: {fileID: 0}
 --- !u!1001 &84515135328690972
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -133,17 +126,6 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
   m_PrefabInstance: {fileID: 84515135328690972}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &5926797746155497165 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 6011308483063186897, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
-  m_PrefabInstance: {fileID: 84515135328690972}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7805c574de0b8d04eafec18d53457e85, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: OrcFarm.Farming::OrcFarm.Farming.HeadFarmTile
 --- !u!1001 &2127879716417712936
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -210,17 +192,6 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
   m_PrefabInstance: {fileID: 2127879716417712936}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &5686861488242833145 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 6011308483063186897, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
-  m_PrefabInstance: {fileID: 2127879716417712936}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7805c574de0b8d04eafec18d53457e85, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: OrcFarm.Farming::OrcFarm.Farming.HeadFarmTile
 --- !u!1001 &2327265333618532038
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -291,17 +262,6 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
   m_PrefabInstance: {fileID: 2327265333618532038}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &8295751781014559511 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 6011308483063186897, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
-  m_PrefabInstance: {fileID: 2327265333618532038}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7805c574de0b8d04eafec18d53457e85, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: OrcFarm.Farming::OrcFarm.Farming.HeadFarmTile
 --- !u!1001 &2795356874865124038
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -368,17 +328,6 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
   m_PrefabInstance: {fileID: 2795356874865124038}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &8477867364242564887 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 6011308483063186897, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
-  m_PrefabInstance: {fileID: 2795356874865124038}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7805c574de0b8d04eafec18d53457e85, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: OrcFarm.Farming::OrcFarm.Farming.HeadFarmTile
 --- !u!1001 &3949102797319000257
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -441,17 +390,6 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
   m_PrefabInstance: {fileID: 3949102797319000257}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &7323553543937676560 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 6011308483063186897, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
-  m_PrefabInstance: {fileID: 3949102797319000257}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7805c574de0b8d04eafec18d53457e85, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: OrcFarm.Farming::OrcFarm.Farming.HeadFarmTile
 --- !u!1001 &4259906172403204322
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -518,17 +456,6 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
   m_PrefabInstance: {fileID: 4259906172403204322}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &7526164992028067123 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 6011308483063186897, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
-  m_PrefabInstance: {fileID: 4259906172403204322}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7805c574de0b8d04eafec18d53457e85, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: OrcFarm.Farming::OrcFarm.Farming.HeadFarmTile
 --- !u!1001 &4416585669508950066
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -599,17 +526,6 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
   m_PrefabInstance: {fileID: 4416585669508950066}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &7937216607299792355 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 6011308483063186897, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
-  m_PrefabInstance: {fileID: 4416585669508950066}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7805c574de0b8d04eafec18d53457e85, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: OrcFarm.Farming::OrcFarm.Farming.HeadFarmTile
 --- !u!1001 &5080931209502339149
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -675,17 +591,6 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
---- !u!114 &1580602066732266908 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 6011308483063186897, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
-  m_PrefabInstance: {fileID: 5080931209502339149}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7805c574de0b8d04eafec18d53457e85, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: OrcFarm.Farming::OrcFarm.Farming.HeadFarmTile
 --- !u!4 &7498879363907097505 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
@@ -756,17 +661,6 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
---- !u!114 &4135036743705246577 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 6011308483063186897, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
-  m_PrefabInstance: {fileID: 7642308631861083808}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7805c574de0b8d04eafec18d53457e85, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: OrcFarm.Farming::OrcFarm.Farming.HeadFarmTile
 --- !u!4 &4944011461838937420 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 3355822802726134764, guid: 8c9484c87eb04c64f81a380e7ee76661, type: 3}
