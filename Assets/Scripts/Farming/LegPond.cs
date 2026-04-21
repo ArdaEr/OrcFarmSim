@@ -3,6 +3,7 @@ using OrcFarm.Carry;
 using OrcFarm.Core;
 using OrcFarm.Interaction;
 using OrcFarm.Inventory;
+using System.Collections.Generic;
 using System.Threading;
 using TMPro;
 using UnityEngine;
@@ -33,6 +34,8 @@ namespace OrcFarm.Farming
     public sealed class LegPond : MonoBehaviour, IInteractable, ILegPondStateContext
     {
         [SerializeField] private LegPondConfig    _config;
+        [SerializeField] private LegFryData       _fryData;
+        [SerializeField] private LegFryCarrySlot  _legFryCarrySlot;
         [SerializeField] private HarvestedLegPool _legPool;
 
         [Tooltip("Optional. TMP text element that shows the harvest quality readout. " +
@@ -55,6 +58,8 @@ namespace OrcFarm.Farming
         private float                  _starvationTimer;
         private bool                   _careGiven;
         private CancellationTokenSource _readoutCts;
+
+        private readonly List<LegFishData> _fish = new List<LegFishData>(8);
 
 #if UNITY_EDITOR
         // ── Debug hooks (Play Mode only) ───────────────────────────────────────
@@ -100,6 +105,9 @@ namespace OrcFarm.Farming
         public bool CareGiven => _careGiven;
 
         /// <inheritdoc/>
+        public LegFryItem CarriedLegFry => _legFryCarrySlot.CarriedItem;
+
+        /// <inheritdoc/>
         public void IncrementGrowthTimer(float delta)     => _growthTimer     += delta;
 
         /// <inheritdoc/>
@@ -138,6 +146,20 @@ namespace OrcFarm.Farming
             }
 
             return true;
+        }
+
+        /// <inheritdoc/>
+        public void ConsumeCarriedLegFry() => _legFryCarrySlot.Consume();
+
+        /// <inheritdoc/>
+        public void InitializeFish(LegFryTier tier)
+        {
+            _fish.Clear();
+            int count = _fryData.GetFishCount(tier);
+            for (int i = 0; i < count; i++)
+                _fish.Add(new LegFishData());
+
+            _quality = _fryData.GetBaseQuality(tier);
         }
 
         /// <inheritdoc/>
@@ -182,6 +204,7 @@ namespace OrcFarm.Farming
                 _starvationTimer = 0f;
                 _careGiven       = false;
                 _quality         = OrcQuality.Low;
+                _fish.Clear();
             }
             else if (next == LegPondState.NeedsCare)
             {
@@ -214,11 +237,20 @@ namespace OrcFarm.Farming
                 throw new System.InvalidOperationException(
                     $"[LegPond '{gameObject.name}'] LegPondConfig is not assigned.");
 
+            if (_fryData == null)
+                throw new System.InvalidOperationException(
+                    $"[LegPond '{gameObject.name}'] LegFryData is not assigned.");
+
+            if (_legFryCarrySlot == null)
+                throw new System.InvalidOperationException(
+                    $"[LegPond '{gameObject.name}'] LegFryCarrySlot is not assigned.");
+
             if (_legPool == null)
                 throw new System.InvalidOperationException(
                     $"[LegPond '{gameObject.name}'] HarvestedLegPool is not assigned.");
 
             _config.Validate();
+            _fryData.Validate();
 
             if (_resultText != null)
                 _resultText.text = string.Empty;

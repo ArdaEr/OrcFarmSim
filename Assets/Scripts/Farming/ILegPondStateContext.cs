@@ -27,6 +27,9 @@ namespace OrcFarm.Farming
         /// <summary>True once the player has fed the pond this growth cycle.</summary>
         bool CareGiven { get; }
 
+        /// <summary>The <see cref="LegFryItem"/> the player is currently carrying, or null.</summary>
+        LegFryItem CarriedLegFry { get; }
+
         /// <summary>Requests a transition to <paramref name="next"/>.</summary>
         void TransitionTo(LegPondState next);
 
@@ -53,6 +56,19 @@ namespace OrcFarm.Farming
         /// Returns false if the inventory is unassigned or lacks the item.
         /// </summary>
         bool TryConsumeItem(ItemType type);
+
+        /// <summary>
+        /// Deactivates the carried <see cref="LegFryItem"/> and clears the carry slot.
+        /// No-op if nothing is being carried.
+        /// </summary>
+        void ConsumeCarriedLegFry();
+
+        /// <summary>
+        /// Clears the existing fish list and populates it with new <see cref="LegFishData"/>
+        /// instances sized by <paramref name="tier"/>. Also sets the pond's base quality to
+        /// the tier's <see cref="LegFryData.GetBaseQuality"/> value.
+        /// </summary>
+        void InitializeFish(LegFryTier tier);
 
         /// <summary>
         /// Spawns a HarvestedLeg at a random offset near the pond and immediately places
