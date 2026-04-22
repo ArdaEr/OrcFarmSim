@@ -20,7 +20,7 @@ namespace OrcFarm.Farming
     /// Inspector. All three are mandatory — Awake logs and disables on any missing ref.
     /// </summary>
     [RequireComponent(typeof(BoxCollider))]
-    public class HeadFarmTile : MonoBehaviour, IInteractable, IHeadTileStateContext
+    public class HeadFarmTile : MonoBehaviour, IInteractable, IHeadTileStateContext, IFarmActionTarget
     {
         [Tooltip("BoxCollider that defines this tile's interactable footprint. " +
                  "Adjust size and center here — do not resize via Transform scale.")]
@@ -226,6 +226,54 @@ namespace OrcFarm.Farming
 
         private void NotifyConditionChanged() =>
             OnConditionChanged(_feedScore, _waterScore, _careScore);
+
+        // ── IFarmActionTarget ──────────────────────────────────────────────────
+
+        /// <inheritdoc/>
+        /// <remarks>
+        /// Called every frame by FarmFocusDetector — zero heap allocation.
+        /// FarmActionContext is a readonly struct; HotbarSlot is a readonly struct.
+        /// </remarks>
+        public FarmActionContext GetActionContext()
+        {
+            if (_tileState != HeadTileState.Growing)
+                return FarmActionContext.None;
+
+            HotbarSlot selected = _inventory.GetSelectedSlot();
+            bool showFeed  = selected.SlotItemType == ItemType.Fertilizer && !selected.IsEmpty;
+            bool showWater = selected.SlotItemType == ItemType.WaterItem   && !selected.IsEmpty;
+
+            return new FarmActionContext(showFeed, showWater, true);
+        }
+
+        /// <inheritdoc/>
+        public void OnFeedAction()
+        {
+            if (_tileState != HeadTileState.Growing || _feedScore >= 1f)
+                return;
+
+            if (_inventory.TryConsumeFromSelectedSlot(1))
+                SetFeedScore(1f);
+        }
+
+        /// <inheritdoc/>
+        public void OnWaterAction()
+        {
+            if (_tileState != HeadTileState.Growing || _waterScore >= 1f)
+                return;
+
+            if (_inventory.TryConsumeFromSelectedSlot(1))
+                SetWaterScore(1f);
+        }
+
+        /// <inheritdoc/>
+        public void OnCareAction()
+        {
+            if (_tileState != HeadTileState.Growing)
+                return;
+
+            SetCareScore(Mathf.Min(1f, _careScore + _data.CareRestoreAmount));
+        }
 
         // ── Public read ────────────────────────────────────────────────────────
 
