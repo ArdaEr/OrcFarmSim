@@ -239,11 +239,10 @@ namespace OrcFarm.Farming
             if (_tileState != HeadTileState.Growing)
                 return FarmActionContext.None;
 
-            HotbarSlot selected = _inventory.GetSelectedSlot();
-            bool showFeed  = selected.SlotItemType == ItemType.Fertilizer && !selected.IsEmpty;
-            bool showWater = selected.SlotItemType == ItemType.WaterItem   && !selected.IsEmpty;
-
-            return new FarmActionContext(showFeed, showWater, true);
+            return new FarmActionContext(
+                feedVisible:  true, feedActive:  _inventory.Has(ItemType.Fertilizer),
+                waterVisible: true, waterActive: _inventory.Has(ItemType.WaterItem),
+                careVisible:  true, careActive:  true);
         }
 
         /// <inheritdoc/>
