@@ -14,6 +14,7 @@ GameObject:
   - component: {fileID: 113962907128720973}
   - component: {fileID: 194723946685599857}
   - component: {fileID: 2039603317239224695}
+  - component: {fileID: 3875175389845451110}
   m_Layer: 6
   m_Name: LegFryWorld
   m_TagString: Untagged
@@ -155,3 +156,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 759bc6ef24ead8047a4d4c8f00a28ac0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: OrcFarm.Carry::OrcFarm.Carry.DroppedHotbarItem
+--- !u!114 &3875175389845451110
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 265852975082658714}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: de2ac0ca3ae5445a181fa4cd675b7db8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: OrcFarm.Farming::OrcFarm.Farming.LegFryItem
+  _tier: 0

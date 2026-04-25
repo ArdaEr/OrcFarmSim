@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 6613510315396266069}
   - component: {fileID: 6579855717234232582}
   - component: {fileID: 6011308483063186897}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: HeadFarmTile
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -149,9 +149,17 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 180
       objectReference: {fileID: 0}
+    - target: {fileID: 6892894897911301223, guid: 4405318b35b56c941974b9e3576484bd, type: 3}
+      propertyPath: m_Layer
+      value: 7
+      objectReference: {fileID: 0}
     - target: {fileID: 9204861190895220801, guid: 4405318b35b56c941974b9e3576484bd, type: 3}
       propertyPath: m_Name
       value: Orc_Head
+      objectReference: {fileID: 0}
+    - target: {fileID: 9204861190895220801, guid: 4405318b35b56c941974b9e3576484bd, type: 3}
+      propertyPath: m_Layer
+      value: 7
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -227,10 +235,22 @@ PrefabInstance:
       propertyPath: m_Name
       value: SM_Cabbage
       objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: d51487d77626b7b4fa7e770f99a05ceb, type: 3}
+      propertyPath: m_Layer
+      value: 7
+      objectReference: {fileID: 0}
+    - target: {fileID: 1151110762167090258, guid: d51487d77626b7b4fa7e770f99a05ceb, type: 3}
+      propertyPath: m_Layer
+      value: 7
+      objectReference: {fileID: 0}
     - target: {fileID: 2330888935960606264, guid: d51487d77626b7b4fa7e770f99a05ceb, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
       objectReference: {fileID: 952047093975074006, guid: 80eb165a07061714ab08096bca9f6c8f, type: 3}
+    - target: {fileID: 7574825097159556366, guid: d51487d77626b7b4fa7e770f99a05ceb, type: 3}
+      propertyPath: m_Layer
+      value: 7
+      objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: 4742473837712756890, guid: d51487d77626b7b4fa7e770f99a05ceb, type: 3}
     m_RemovedGameObjects:
