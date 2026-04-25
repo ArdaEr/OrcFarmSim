@@ -35,12 +35,32 @@ namespace OrcFarm.Player
         [Min(0.1f)]
         [SerializeField] private float _maxRange = 3f;
 
+        [Tooltip("Base color tint applied to the focused tile's Renderer via MaterialPropertyBlock (§5.5).")]
+        [SerializeField] private Color _highlightColor = new Color(0f, 1f, 0.2f, 1f);
+
+        [Tooltip("Emission color applied when the tile material has _EMISSION enabled.")]
+        [SerializeField] private Color _emissionColor = new Color(0f, 0.6f, 0f, 1f);
+
+        // ── Cached shader property IDs (URP Lit: _BaseColor / _EmissionColor) ──
+
+        private static readonly int BaseColorId     = Shader.PropertyToID("_BaseColor");
+        private static readonly int EmissionColorId = Shader.PropertyToID("_EmissionColor");
+
         // ── Runtime state ──────────────────────────────────────────────────────
 
         private IFarmActionTarget _currentTarget;
 
         // Cached so TryGetComponent is called only when the hit collider changes (§5.2).
         private Collider _lastHitCollider;
+
+        // Highlight — one renderer tinted at a time; cleared before new one is set.
+        private Renderer              _highlightedRenderer;
+        private MaterialPropertyBlock _mpb;
+
+        // Original material values cached when a tile is first focused (requirement §6).
+        private Color _cachedBaseColor;
+        private Color _cachedEmissionColor;
+        private bool  _supportsEmission;
 
         // ── Public read — consumed by FarmActionPanel every frame ──────────────
 
@@ -63,6 +83,8 @@ namespace OrcFarm.Player
                 enabled = false;
                 return;
             }
+
+            _mpb = new MaterialPropertyBlock();
         }
 
         private void Update()
@@ -91,19 +113,74 @@ namespace OrcFarm.Player
             {
                 Collider hitCollider = hit.collider;
 
-                // Only call TryGetComponent when the collider changes.
+                // Only call TryGetComponent and update highlight when the collider changes.
                 if (hitCollider != _lastHitCollider)
                 {
+                    ClearHighlight();
                     _lastHitCollider = hitCollider;
                     hitCollider.TryGetComponent(out _currentTarget);
+
+                    if (_currentTarget != null)
+                        ApplyHighlight(hitCollider.gameObject);
                 }
-                // If same collider as last frame, _currentTarget is still valid.
             }
             else
             {
+                if (_lastHitCollider != null)
+                    ClearHighlight();
+
                 _lastHitCollider = null;
                 _currentTarget   = null;
             }
+        }
+
+        private void ApplyHighlight(GameObject target)
+        {
+            if (!target.TryGetComponent(out _highlightedRenderer))
+                return;
+
+            // Cache originals from the shared material before overriding.
+            Material mat     = _highlightedRenderer.sharedMaterial;
+            _cachedBaseColor = mat.GetColor(BaseColorId);
+
+            // Emission is only applied when the material already has _EMISSION enabled.
+            // MaterialPropertyBlock cannot enable shader keywords — that requires modifying
+            // the material itself, which would affect all instances (§5.5).
+            _supportsEmission    = mat.HasProperty(EmissionColorId) && mat.IsKeywordEnabled("_EMISSION");
+            _cachedEmissionColor = _supportsEmission ? mat.GetColor(EmissionColorId) : Color.black;
+
+            _mpb.Clear();
+            _mpb.SetColor(BaseColorId, _highlightColor);
+
+            if (_supportsEmission)
+                _mpb.SetColor(EmissionColorId, _emissionColor);
+            else
+                LogNoEmission(_highlightedRenderer.gameObject.name);
+
+            _highlightedRenderer.SetPropertyBlock(_mpb);
+        }
+
+        private void ClearHighlight()
+        {
+            if (_highlightedRenderer == null)
+                return;
+
+            _mpb.Clear();
+            _mpb.SetColor(BaseColorId, _cachedBaseColor);
+
+            if (_supportsEmission)
+                _mpb.SetColor(EmissionColorId, _cachedEmissionColor);
+
+            _highlightedRenderer.SetPropertyBlock(_mpb);
+            _highlightedRenderer = null;
+        }
+
+        [System.Diagnostics.Conditional("UNITY_EDITOR")]
+        private void LogNoEmission(string rendererName)
+        {
+            Debug.LogWarning(
+                "[FarmFocusDetector] Renderer on '" + rendererName + "' does not support emission " +
+                "(_EMISSION keyword not enabled on its material). Emission boost skipped.", this);
         }
 
         private void HandleActionInput()

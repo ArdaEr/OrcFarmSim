@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 using VContainer;
 
 namespace OrcFarm.Player
@@ -42,12 +43,24 @@ namespace OrcFarm.Player
             if (_cameraPivot == null)
                 throw new System.InvalidOperationException(
                     $"[PlayerLook] _cameraPivot is not assigned on '{gameObject.name}'.");
+
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible   = false;
         }
 
         // Zero allocations: Vector2/Vector3/Quaternion are value types;
         // Mathf.Clamp and Quaternion.Euler return value types (§3.1).
         private void Update()
         {
+#if UNITY_EDITOR
+            if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
+            {
+                bool locked      = Cursor.lockState == CursorLockMode.Locked;
+                Cursor.lockState = locked ? CursorLockMode.None : CursorLockMode.Locked;
+                Cursor.visible   = locked;
+            }
+#endif
+
             Vector2 look = _input.LookInput;
 
             // Yaw: spin the player body left / right
