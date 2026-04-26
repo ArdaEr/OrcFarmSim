@@ -30,6 +30,13 @@ namespace OrcFarm.Farming
         /// <summary>The <see cref="LegFryItem"/> the player is currently carrying, or null.</summary>
         LegFryItem CarriedLegFry { get; }
 
+        /// <summary>
+        /// Tries to stock the pond using a LegFry from the player's selected hotbar slot.
+        /// Consumes one item and initializes fish at Normal tier.
+        /// Returns true if stocking succeeded.
+        /// </summary>
+        bool TryStockFromHotbar();
+
         /// <summary>Requests a transition to <paramref name="next"/>.</summary>
         void TransitionTo(LegPondState next);
 
@@ -75,5 +82,26 @@ namespace OrcFarm.Farming
         /// it in the player's carry slot via <see cref="OrcFarm.Carry.ICarryController.PickUpLeg"/>.
         /// </summary>
         void SpawnAndCarryLeg();
+
+        /// <summary>
+        /// Decays FeedScore and CareScore on all alive fish by the given per-frame delta amounts.
+        /// Fish whose FeedScore reaches zero are marked dead (IsAlive = false).
+        /// Returns true if every fish in the pond is dead after decay.
+        /// </summary>
+        bool DecayFishScores(float feedDecay, float careDecay);
+
+        /// <summary>
+        /// Count of alive fish that have not yet been harvested.
+        /// Relevant during ReadyToHarvest; returns 0 when all fish are dead or after
+        /// the last harvest before the pond transitions to Empty.
+        /// </summary>
+        int AliveRemainingFishCount { get; }
+
+        /// <summary>
+        /// Harvests the next alive fish: calculates per-fish quality from condition scores,
+        /// spawns a HarvestedLeg at a random offset, immediately carries it, and shows
+        /// the harvest readout. Does nothing if no alive fish remain or the pool is exhausted.
+        /// </summary>
+        void HarvestNextLeg();
     }
 }

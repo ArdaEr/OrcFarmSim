@@ -1,21 +1,17 @@
-using OrcFarm.Inventory;
-
 namespace OrcFarm.Farming
 {
     /// <summary>
-    /// Care checkpoint reached. Growth continues while the pond waits for a feed.
+    /// Care checkpoint reached. Fish scores continue decaying at the same rates as Growing.
+    /// Per-fish starvation death continues — any fish whose FeedScore hits 0 dies;
+    /// if all fish die the pond enters Starved.
     ///
-    /// Quality rules:
-    ///   - Feeding (consuming one FeedItem) raises quality Low → Normal and returns
-    ///     the pond to Growing.
-    ///   - Missing the feed window is a quality penalty only — quality stays Low and
-    ///     growth continues toward ReadyToHarvest.
+    /// The window runs for <see cref="LegPondConfig.NeedsCareDuration"/> seconds.
+    /// Feed (F) and Care (C) work identically to Growing via the existing action methods on
+    /// <see cref="LegPond"/>. The E key is blocked (CanInteract is false).
     ///
-    /// Starvation rule:
-    ///   - The neglect timer counts up whenever no interaction occurs. Any player
-    ///     interaction (feed or otherwise) resets the timer to zero.
-    ///   - If <see cref="LegPondConfig.NeglectDeadline"/> elapses with zero interaction,
-    ///     the pond enters Starved.
+    /// When the window closes the pond returns to Growing with the growth timer preserved.
+    /// <see cref="ILegPondStateContext.SetCareGiven"/> is called on exit so the Growing
+    /// checkpoint check does not re-trigger immediately.
     /// </summary>
     internal sealed class LegPondNeedsCareState : ILegPondState
     {
@@ -23,41 +19,31 @@ namespace OrcFarm.Farming
 
         internal LegPondNeedsCareState(ILegPondStateContext ctx) => _ctx = ctx;
 
-        public bool CanInteract => true;
-        public void OnEnter()   { }
-        public void OnExit()    { }
+        public bool CanInteract => false;
+        public void OnEnter()    { }
+        public void OnExit()     { }
+        public void OnInteract() { }
 
         public void Update()
         {
             float delta = UnityEngine.Time.deltaTime;
-            _ctx.IncrementGrowthTimer(delta);
             _ctx.IncrementStarvationTimer(delta);
 
-            // Growth completion takes priority — harvest even if still in NeedsCare.
-            if (_ctx.GrowthTimer >= _ctx.Config.GrowthDuration)
+            bool allDead = _ctx.DecayFishScores(
+                _ctx.Config.FeedDecayRate * delta,
+                _ctx.Config.CareDecayRate * delta);
+
+            if (allDead)
             {
-                _ctx.TransitionTo(LegPondState.ReadyToHarvest);
+                _ctx.TransitionTo(LegPondState.Starved);
                 return;
             }
 
-            // Total neglect — player never interacted since NeedsCare opened.
-            if (_ctx.StarvationTimer >= _ctx.Config.NeglectDeadline)
-                _ctx.TransitionTo(LegPondState.Starved);
-        }
-
-        public void OnInteract()
-        {
-            // Any interaction resets the neglect clock (req 6).
-            _ctx.ResetStarvationTimer();
-
-            // Without a FeedItem the player has acknowledged the pond but not fed it.
-            // Quality stays Low; pond remains in NeedsCare and continues growing.
-            if (!_ctx.TryConsumeItem(ItemType.FeedItem))
-                return;
-
-            _ctx.UpgradeQuality();
-            _ctx.SetCareGiven();
-            _ctx.TransitionTo(LegPondState.Growing);
+            if (_ctx.StarvationTimer >= _ctx.Config.NeedsCareDuration)
+            {
+                _ctx.SetCareGiven();
+                _ctx.TransitionTo(LegPondState.Growing);
+            }
         }
     }
 }

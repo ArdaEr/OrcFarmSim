@@ -12,9 +12,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d92cab797706dd349aed8d3e76bdb5a0, type: 3}
   m_Name: LegPondConfig
   m_EditorClassIdentifier: OrcFarm.Farming::OrcFarm.Farming.LegPondConfig
-  _stockedDelay: 5
-  _growthDuration: 60
+  _stockedDelay: 2
+  _growthDuration: 30
   _careCheckpointFraction: 0.5
   _starvationWindow: 15
   _harvestSpawnRadius: 1.2
   _harvestSpawnHeight: 0.8
+  _neglectDeadline: 30
+  _highQualityChance: 0.1
+  _feedDecayRate: 0.005
+  _careDecayRate: 0.002
+  _careRestoreAmount: 0.5

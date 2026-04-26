@@ -19,23 +19,29 @@ namespace OrcFarm.Farming
         public void OnInteract()
         {
             LegFryItem carried = _ctx.CarriedLegFry;
-            if (carried == null)
+            if (carried != null)
             {
-                LogNotCarrying();
+                LegFryTier tier = carried.Tier;
+                _ctx.ConsumeCarriedLegFry();
+                _ctx.InitializeFish(tier);
+                _ctx.TransitionTo(LegPondState.Stocked);
                 return;
             }
 
-            LegFryTier tier = carried.Tier;
-            _ctx.ConsumeCarriedLegFry();
-            _ctx.InitializeFish(tier);
-            _ctx.TransitionTo(LegPondState.Stocked);
+            if (_ctx.TryStockFromHotbar())
+            {
+                _ctx.TransitionTo(LegPondState.Stocked);
+                return;
+            }
+
+            LogNotCarrying();
         }
 
         [System.Diagnostics.Conditional("UNITY_EDITOR")]
         private void LogNotCarrying()
         {
             UnityEngine.Debug.Log(
-                "[LegPondEmptyState] Cannot stock — player is not carrying a LegFryItem.");
+                "[LegPondEmptyState] Cannot stock — no LegFry carried or in selected hotbar slot.");
         }
     }
 }

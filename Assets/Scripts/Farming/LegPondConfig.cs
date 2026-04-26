@@ -44,6 +44,41 @@ namespace OrcFarm.Farming
         [Range(0f, 1f)]
         [SerializeField] private float _highQualityChance = 0.10f;
 
+        [Tooltip("FeedScore units lost per second per fish while the pond is Growing.")]
+        [Min(0.001f)]
+        [SerializeField] private float _feedDecayRate = 0.05f;
+
+        [Tooltip("CareScore units lost per second per fish while the pond is Growing.")]
+        [Min(0.001f)]
+        [SerializeField] private float _careDecayRate = 0.025f;
+
+        [Tooltip("CareScore restored per OnCareAction call, applied to all alive fish. Clamped to 1.")]
+        [Range(0.1f, 1f)]
+        [SerializeField] private float _careRestoreAmount = 0.5f;
+
+        [Tooltip("Seconds the NeedsCare window stays open before the pond automatically returns to Growing.")]
+        [Min(1f)]
+        [SerializeField] private float _needsCareDuration = 20f;
+
+        [Tooltip("Minimum horizontal distance from the pond centre where a harvested leg spawns.")]
+        [Min(0.1f)]
+        [SerializeField] private float _spawnOffsetMin = 1.2f;
+
+        [Tooltip("Maximum horizontal distance from the pond centre where a harvested leg spawns. " +
+                 "Must be >= SpawnOffsetMin.")]
+        [Min(0.1f)]
+        [SerializeField] private float _spawnOffsetMax = 1.8f;
+
+        [Tooltip("Average of FeedScore and CareScore at or above which the fish yields one tier " +
+                 "above the pond's BaseQuality (capped at High).")]
+        [Range(0f, 1f)]
+        [SerializeField] private float _highQualityThreshold = 0.75f;
+
+        [Tooltip("Average of FeedScore and CareScore at or above which the fish yields exactly " +
+                 "BaseQuality. Below this value yields one tier lower (capped at Low).")]
+        [Range(0f, 1f)]
+        [SerializeField] private float _normalQualityThreshold = 0.4f;
+
         /// <summary>Seconds after stocking before growth begins.</summary>
         public float StockedDelay => _stockedDelay;
 
@@ -73,6 +108,36 @@ namespace OrcFarm.Farming
         /// </summary>
         public float HighQualityChance => _highQualityChance;
 
+        /// <summary>FeedScore units lost per second per fish while Growing.</summary>
+        public float FeedDecayRate => _feedDecayRate;
+
+        /// <summary>CareScore units lost per second per fish while Growing.</summary>
+        public float CareDecayRate => _careDecayRate;
+
+        /// <summary>CareScore restored per OnCareAction call applied to all alive fish.</summary>
+        public float CareRestoreAmount => _careRestoreAmount;
+
+        /// <summary>Seconds the NeedsCare window stays open before automatically returning to Growing.</summary>
+        public float NeedsCareDuration => _needsCareDuration;
+
+        /// <summary>Minimum horizontal spawn distance for a harvested leg.</summary>
+        public float SpawnOffsetMin => _spawnOffsetMin;
+
+        /// <summary>Maximum horizontal spawn distance for a harvested leg.</summary>
+        public float SpawnOffsetMax => _spawnOffsetMax;
+
+        /// <summary>
+        /// Score average threshold (inclusive) for one-tier upgrade above BaseQuality.
+        /// Must be greater than <see cref="NormalQualityThreshold"/>.
+        /// </summary>
+        public float HighQualityThreshold => _highQualityThreshold;
+
+        /// <summary>
+        /// Score average threshold (inclusive) for BaseQuality output.
+        /// Below this value the fish yields one tier below BaseQuality.
+        /// </summary>
+        public float NormalQualityThreshold => _normalQualityThreshold;
+
         /// <summary>Absolute seconds-after-stocking when the care checkpoint opens.</summary>
         public float CareCheckpointTime => _growthDuration * _careCheckpointFraction;
 
@@ -86,6 +151,14 @@ namespace OrcFarm.Farming
             _harvestSpawnHeight      = Mathf.Max(0f,   _harvestSpawnHeight);
             _neglectDeadline         = Mathf.Max(1f, _neglectDeadline);
             _highQualityChance       = Mathf.Clamp01(_highQualityChance);
+            _feedDecayRate           = Mathf.Max(0.001f, _feedDecayRate);
+            _careDecayRate           = Mathf.Max(0.001f, _careDecayRate);
+            _careRestoreAmount       = Mathf.Clamp(_careRestoreAmount, 0.1f, 1f);
+            _needsCareDuration        = Mathf.Max(1f, _needsCareDuration);
+            _spawnOffsetMin           = Mathf.Max(0.1f, _spawnOffsetMin);
+            _spawnOffsetMax           = Mathf.Max(_spawnOffsetMin, _spawnOffsetMax);
+            _highQualityThreshold     = Mathf.Clamp01(_highQualityThreshold);
+            _normalQualityThreshold   = Mathf.Clamp(_normalQualityThreshold, 0f, _highQualityThreshold);
         }
 
         /// <summary>
@@ -113,6 +186,30 @@ namespace OrcFarm.Farming
             if (_neglectDeadline <= 0f)
                 throw new System.InvalidOperationException(
                     $"[LegPondConfig '{name}'] NeglectDeadline must be > 0.");
+
+            if (_feedDecayRate <= 0f)
+                throw new System.InvalidOperationException(
+                    $"[LegPondConfig '{name}'] FeedDecayRate must be > 0.");
+
+            if (_careDecayRate <= 0f)
+                throw new System.InvalidOperationException(
+                    $"[LegPondConfig '{name}'] CareDecayRate must be > 0.");
+
+            if (_needsCareDuration <= 0f)
+                throw new System.InvalidOperationException(
+                    $"[LegPondConfig '{name}'] NeedsCareDuration must be > 0.");
+
+            if (_spawnOffsetMin <= 0f)
+                throw new System.InvalidOperationException(
+                    $"[LegPondConfig '{name}'] SpawnOffsetMin must be > 0.");
+
+            if (_spawnOffsetMax < _spawnOffsetMin)
+                throw new System.InvalidOperationException(
+                    $"[LegPondConfig '{name}'] SpawnOffsetMax must be >= SpawnOffsetMin.");
+
+            if (_normalQualityThreshold >= _highQualityThreshold)
+                throw new System.InvalidOperationException(
+                    $"[LegPondConfig '{name}'] NormalQualityThreshold must be < HighQualityThreshold.");
         }
     }
 }

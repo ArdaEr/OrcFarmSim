@@ -38,6 +38,10 @@ namespace OrcFarm.Farming
         [Tooltip("Scene CarryController used to initialize harvested heads so the player can pick them up.")]
         [SerializeField] private CarryController _carryController;
 
+        [Tooltip("Assign the FarmFocusDetector component from the player. " +
+                 "Ensures E interaction only fires when the player is looking at this tile.")]
+        [SerializeField] private MonoBehaviour _farmFocusBehaviour;
+
         [Header("Growth Visual")]
         [Tooltip("Object that scales while this tile is Growing. Optional; leave empty for no crop growth visual.")]
         [SerializeField] private Transform _growthVisual;
@@ -70,8 +74,9 @@ namespace OrcFarm.Farming
         [HideInInspector]
         [SerializeField] private bool _indexAssigned;
 
-        private float              _timer;
-        private HeadTileState      _tileState = HeadTileState.Empty;
+        private IFarmFocusSource     _farmFocus;
+        private float                _timer;
+        private HeadTileState        _tileState = HeadTileState.Empty;
         private HeadTileStateMachine _stateMachine;
 
         // Condition scores — valid only during Growing state; reset on Growing enter.
@@ -85,11 +90,21 @@ namespace OrcFarm.Farming
         // ── IInteractable ──────────────────────────────────────────────────────
 
         /// <inheritdoc/>
-        /// <remarks>False until <see cref="AssignIndex"/> is called and the active state allows it.</remarks>
-        public bool CanInteract => enabled && _indexAssigned && _stateMachine.CanInteract;
+        /// <remarks>
+        /// False until <see cref="AssignIndex"/> is called, the active state allows it,
+        /// and the player is looking directly at this tile via FarmFocusDetector.
+        /// </remarks>
+        public bool CanInteract =>
+            enabled && _indexAssigned && _stateMachine.CanInteract &&
+            _farmFocus?.CurrentTarget == (IFarmActionTarget)this;
 
         /// <inheritdoc/>
-        public void OnInteract() => _stateMachine.OnInteract();
+        public void OnInteract()
+        {
+            if (_tileState == HeadTileState.Growing)
+                return;
+            _stateMachine.OnInteract();
+        }
 
         // ── IHeadTileStateContext ──────────────────────────────────────────────
 
@@ -239,16 +254,24 @@ namespace OrcFarm.Farming
             if (_tileState != HeadTileState.Growing)
                 return FarmActionContext.None;
 
+            HotbarSlot selected = _inventory.GetSelectedSlot();
             return new FarmActionContext(
-                feedVisible:  true, feedActive:  _inventory.Has(ItemType.Fertilizer),
-                waterVisible: true, waterActive: _inventory.Has(ItemType.WaterItem),
-                careVisible:  true, careActive:  true);
+                feedVisible:  true,
+                feedActive:   selected.SlotItemType == ItemType.Fertilizer && !selected.IsEmpty,
+                waterVisible: true,
+                waterActive:  selected.SlotItemType == ItemType.WaterItem  && !selected.IsEmpty,
+                careVisible:  true,
+                careActive:   HasEmptyHands());
         }
 
         /// <inheritdoc/>
         public void OnFeedAction()
         {
             if (_tileState != HeadTileState.Growing || _feedScore >= 1f)
+                return;
+
+            HotbarSlot slot = _inventory.GetSelectedSlot();
+            if (slot.SlotItemType != ItemType.Fertilizer || slot.IsEmpty)
                 return;
 
             if (_inventory.TryConsumeFromSelectedSlot(1))
@@ -261,6 +284,10 @@ namespace OrcFarm.Farming
             if (_tileState != HeadTileState.Growing || _waterScore >= 1f)
                 return;
 
+            HotbarSlot slot = _inventory.GetSelectedSlot();
+            if (slot.SlotItemType != ItemType.WaterItem || slot.IsEmpty)
+                return;
+
             if (_inventory.TryConsumeFromSelectedSlot(1))
                 SetWaterScore(1f);
         }
@@ -268,7 +295,7 @@ namespace OrcFarm.Farming
         /// <inheritdoc/>
         public void OnCareAction()
         {
-            if (_tileState != HeadTileState.Growing)
+            if (_tileState != HeadTileState.Growing || !HasEmptyHands())
                 return;
 
             SetCareScore(Mathf.Min(1f, _careScore + _data.CareRestoreAmount));
@@ -361,6 +388,25 @@ namespace OrcFarm.Farming
                 return;
             }
 
+            if (_farmFocusBehaviour == null)
+            {
+                Debug.LogError(
+                    $"[HeadFarmTile '{gameObject.name}'] _farmFocusBehaviour is not assigned. " +
+                    "Drag FarmFocusDetector from the player.", this);
+                enabled = false;
+                return;
+            }
+
+            _farmFocus = _farmFocusBehaviour as IFarmFocusSource;
+            if (_farmFocus == null)
+            {
+                Debug.LogError(
+                    $"[HeadFarmTile '{gameObject.name}'] _farmFocusBehaviour does not implement " +
+                    "IFarmFocusSource — assign FarmFocusDetector.", this);
+                enabled = false;
+                return;
+            }
+
             _growthVisualStartScale   = Mathf.Max(0f, _growthVisualStartScale);
             _growthVisualHarvestScale = Mathf.Max(_growthVisualStartScale, _growthVisualHarvestScale);
 
@@ -408,6 +454,15 @@ namespace OrcFarm.Farming
 #endif
 
         // ── Helpers ────────────────────────────────────────────────────────────
+
+        private bool HasEmptyHands()
+        {
+            if (_carryController != null && _carryController.IsCarrying)
+                return false;
+
+            HotbarSlot slot = _inventory.GetSelectedSlot();
+            return slot.IsEmpty;
+        }
 
         private IHeadTileState CreateState(HeadTileState state) => state switch
         {

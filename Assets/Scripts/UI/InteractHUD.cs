@@ -78,8 +78,9 @@ namespace OrcFarm.UI
         private int           _lastLegFryCount     = -1;
         private PlotState     _lastPlotState       = (PlotState)(-1);  // used by UpdatePrompt
         private PlotState     _lastPlotStatusState = (PlotState)(-1);  // used by UpdatePlotStatus
-        private LegPondState  _lastPondState       = (LegPondState)(-1);
-        private HeadTileState _lastTileState       = (HeadTileState)(-1);
+        private LegPondState  _lastPondState            = (LegPondState)(-1);
+        private int           _lastAliveRemainingCount  = -1;
+        private HeadTileState _lastTileState            = (HeadTileState)(-1);
         private bool          _lastCanSecondary;                        // tracks Q prompt visibility
         private bool          _loggedMissingInjection;
 
@@ -188,9 +189,15 @@ namespace OrcFarm.UI
 
         private void UpdatePrompt()
         {
-            IInteractable target          = _interactionService.CurrentTarget;
-            bool          plotChanged     = target is FarmPlot fp && fp.State != _lastPlotState;
-            bool          pondChanged     = target is LegPond  lp && lp.State != _lastPondState;
+            IInteractable target      = _interactionService.CurrentTarget;
+            bool          plotChanged = target is FarmPlot fp && fp.State != _lastPlotState;
+
+            LegPond focusedPond   = target as LegPond;
+            int     aliveRemaining = focusedPond != null && focusedPond.State == LegPondState.ReadyToHarvest
+                                     ? focusedPond.AliveRemainingFishCount : -1;
+            bool pondChanged      = focusedPond != null &&
+                                    (focusedPond.State != _lastPondState ||
+                                     aliveRemaining != _lastAliveRemainingCount);
             // Growing tiles rebuild every frame so the F/W/C scores stay live.
             bool          tileChanged     = target is HeadFarmTile ht &&
                                             (ht.State != _lastTileState || ht.State == HeadTileState.Growing);
@@ -209,10 +216,11 @@ namespace OrcFarm.UI
             if (target == _lastTarget && !plotChanged && !pondChanged && !tileChanged && !secondaryChanged)
                 return;
 
-            _lastTarget       = target;
-            _lastCanSecondary = canSecondary;
+            _lastTarget              = target;
+            _lastCanSecondary        = canSecondary;
+            _lastAliveRemainingCount = aliveRemaining;
             if (target is FarmPlot fp2)      _lastPlotState  = fp2.State;
-            if (target is LegPond  lp2)      _lastPondState  = lp2.State;
+            if (focusedPond != null)         _lastPondState  = focusedPond.State;
             if (target is HeadFarmTile ht2)  _lastTileState  = ht2.State;
 
             if (target == null || !target.CanInteract)
@@ -241,7 +249,9 @@ namespace OrcFarm.UI
                 return "E:  " + GetFarmPlotAction(plot.State);
 
             if (target is LegPond pond)
-                return "E:  " + GetLegPondAction(pond.State);
+                return pond.State == LegPondState.ReadyToHarvest
+                    ? "E:  " + pond.HarvestPrompt
+                    : "E:  " + GetLegPondAction(pond.State);
 
             if (target is HarvestedHead)
                 return "E:  Pick up head";

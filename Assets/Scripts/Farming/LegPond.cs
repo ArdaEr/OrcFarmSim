@@ -31,12 +31,16 @@ namespace OrcFarm.Farming
     /// <see cref="InteractionDetector"/> can detect it inside its trigger sphere.
     /// </summary>
     [RequireComponent(typeof(Collider))]
-    public sealed class LegPond : MonoBehaviour, IInteractable, ILegPondStateContext
+    public sealed class LegPond : MonoBehaviour, IInteractable, ILegPondStateContext, IFarmActionTarget
     {
         [SerializeField] private LegPondConfig    _config;
         [SerializeField] private LegFryData       _fryData;
         [SerializeField] private LegFryCarrySlot  _legFryCarrySlot;
         [SerializeField] private HarvestedLegPool _legPool;
+
+        [Tooltip("Assign the FarmFocusDetector component from the player. " +
+                 "Ensures E interaction only fires when the player is looking at this pond.")]
+        [SerializeField] private MonoBehaviour _farmFocusBehaviour;
 
         [Tooltip("Optional. TMP text element that shows the harvest quality readout. " +
                  "Assign the same result-readout TMP used by AssemblyStation.")]
@@ -47,10 +51,11 @@ namespace OrcFarm.Farming
         [Min(0.1f)]
         [SerializeField] private float _readoutClearDelay = 4f;
 
-        private IPlayerInventory  _inventory;
-        private ICarryController  _carry;
+        private IPlayerInventory    _inventory;
+        private ICarryController    _carry;
+        private IFarmFocusSource    _farmFocus;
         private LegPondStateMachine _stateMachine;
-        private LegPondState      _pondState = LegPondState.Empty;
+        private LegPondState        _pondState = LegPondState.Empty;
 
         private OrcQuality             _quality;
         private float                  _growthTimer;
@@ -152,6 +157,23 @@ namespace OrcFarm.Farming
         public void ConsumeCarriedLegFry() => _legFryCarrySlot.Consume();
 
         /// <inheritdoc/>
+        public bool TryStockFromHotbar()
+        {
+            if (_inventory == null)
+                return false;
+
+            HotbarSlot slot = _inventory.GetSelectedSlot();
+            if (slot.SlotItemType != ItemType.LegFry || slot.IsEmpty)
+                return false;
+
+            if (!_inventory.TryConsumeFromSelectedSlot(1))
+                return false;
+
+            InitializeFish(LegFryTier.Normal);
+            return true;
+        }
+
+        /// <inheritdoc/>
         public void InitializeFish(LegFryTier tier)
         {
             _fish.Clear();
@@ -216,18 +238,192 @@ namespace OrcFarm.Farming
             _stateMachine.ChangeState(CreateState(next));
         }
 
+        // ── ILegPondStateContext — fish decay ──────────────────────────────────
+
+        /// <inheritdoc/>
+        public bool DecayFishScores(float feedDecay, float careDecay)
+        {
+            bool anyAlive = false;
+            for (int i = 0; i < _fish.Count; i++)
+            {
+                LegFishData fish = _fish[i];
+                if (!fish.IsAlive)
+                    continue;
+
+                fish.FeedScore = Mathf.Max(0f, fish.FeedScore - feedDecay);
+                fish.CareScore = Mathf.Max(0f, fish.CareScore - careDecay);
+
+                if (fish.FeedScore <= 0f)
+                    fish.IsAlive = false;
+                else
+                    anyAlive = true;
+            }
+
+            return !anyAlive;
+        }
+
+        // ── ILegPondStateContext — per-fish harvest ────────────────────────────
+
+        /// <inheritdoc/>
+        public int AliveRemainingFishCount
+        {
+            get
+            {
+                int count = 0;
+                for (int i = 0; i < _fish.Count; i++)
+                    if (_fish[i].IsAlive) count++;
+                return count;
+            }
+        }
+
+        /// <inheritdoc/>
+        public void HarvestNextLeg()
+        {
+            for (int i = 0; i < _fish.Count; i++)
+            {
+                LegFishData fish = _fish[i];
+                if (!fish.IsAlive)
+                    continue;
+
+                OrcQuality quality = CalculateFishQuality(fish);
+
+                Vector2 circle   = Random.insideUnitCircle.normalized;
+                float   dist     = Random.Range(_config.SpawnOffsetMin, _config.SpawnOffsetMax);
+                Vector3 offset   = new Vector3(circle.x, 0f, circle.y) * dist;
+                Vector3 spawnPos = transform.position + offset + Vector3.up * _config.HarvestSpawnHeight;
+
+                GameObject go = _legPool.Get(spawnPos, Quaternion.identity);
+                if (go == null)
+                {
+                    LogPoolExhausted();
+                    return;
+                }
+
+                if (!go.TryGetComponent(out HarvestedLeg leg))
+                {
+                    LogMissingComponent(go.name);
+                    return;
+                }
+
+                fish.IsAlive = false;
+                leg.SetQuality(quality);
+                leg.Initialize(_carry);
+                _carry.PickUpLeg(leg);
+                ShowHarvestReadout(quality);
+                return;
+            }
+        }
+
+        // ── IFarmActionTarget ──────────────────────────────────────────────────
+
+        /// <inheritdoc/>
+        /// <remarks>Called every frame by FarmFocusDetector — zero heap allocation.</remarks>
+        public FarmActionContext GetActionContext()
+        {
+            if (_pondState != LegPondState.Growing && _pondState != LegPondState.NeedsCare)
+                return FarmActionContext.None;
+
+            bool feedActive = false;
+            if (_inventory != null)
+            {
+                HotbarSlot slot = _inventory.GetSelectedSlot();
+                if (slot.SlotItemType == ItemType.FeedItem && !slot.IsEmpty)
+                {
+                    for (int i = 0; i < _fish.Count; i++)
+                    {
+                        if (_fish[i].IsAlive && _fish[i].FeedScore < 1f)
+                        {
+                            feedActive = true;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            return new FarmActionContext(
+                feedVisible:  true,  feedActive:  feedActive,
+                waterVisible: false, waterActive: false,
+                careVisible:  true,  careActive:  HasEmptyHands());
+        }
+
+        /// <inheritdoc/>
+        public void OnFeedAction()
+        {
+            if (_pondState != LegPondState.Growing && _pondState != LegPondState.NeedsCare)
+                return;
+
+            int lowestIndex = -1;
+            float lowestScore = 1f;
+            for (int i = 0; i < _fish.Count; i++)
+            {
+                if (_fish[i].IsAlive && _fish[i].FeedScore < lowestScore)
+                {
+                    lowestScore  = _fish[i].FeedScore;
+                    lowestIndex  = i;
+                }
+            }
+
+            if (lowestIndex < 0)
+                return; // All alive fish are already fully fed — do not consume
+
+            if (_inventory == null)
+                return;
+
+            HotbarSlot slot = _inventory.GetSelectedSlot();
+            if (slot.SlotItemType != ItemType.FeedItem || slot.IsEmpty)
+                return;
+
+            if (!_inventory.TryConsumeFromSelectedSlot(1))
+                return;
+
+            _fish[lowestIndex].FeedScore = 1f;
+        }
+
+        /// <inheritdoc/>
+        public void OnWaterAction() { } // Pond never uses water
+
+        /// <inheritdoc/>
+        public void OnCareAction()
+        {
+            if ((_pondState != LegPondState.Growing && _pondState != LegPondState.NeedsCare) || !HasEmptyHands())
+                return;
+
+            for (int i = 0; i < _fish.Count; i++)
+            {
+                if (_fish[i].IsAlive)
+                    _fish[i].CareScore = Mathf.Min(1f, _fish[i].CareScore + _config.CareRestoreAmount);
+            }
+        }
+
         // ── IInteractable ──────────────────────────────────────────────────────
 
         /// <inheritdoc/>
-        public bool CanInteract => enabled && _stateMachine.CanInteract;
+        /// <remarks>
+        /// Requires the player to be looking at this pond via FarmFocusDetector —
+        /// prevents E interaction from firing when the pond is only within proximity range.
+        /// </remarks>
+        public bool CanInteract =>
+            enabled && _stateMachine.CanInteract &&
+            _farmFocus?.CurrentTarget == (IFarmActionTarget)this;
 
         /// <inheritdoc/>
-        public void OnInteract() => _stateMachine.OnInteract();
+        public void OnInteract()
+        {
+            if (_pondState == LegPondState.Growing || _pondState == LegPondState.NeedsCare)
+                return;
+            _stateMachine.OnInteract();
+        }
 
         // ── Public state read ──────────────────────────────────────────────────
 
         /// <summary>Current lifecycle state. Exposed for UI and debug inspection.</summary>
         public LegPondState State => _pondState;
+
+        /// <summary>
+        /// Dynamic prompt shown by InteractHUD during ReadyToHarvest.
+        /// Rebuilt only when alive fish count changes — string concat acceptable outside hot path.
+        /// </summary>
+        public string HarvestPrompt => "Harvest leg  (" + AliveRemainingFishCount + " remaining)";
 
         // ── Unity lifecycle ────────────────────────────────────────────────────
 
@@ -248,6 +444,17 @@ namespace OrcFarm.Farming
             if (_legPool == null)
                 throw new System.InvalidOperationException(
                     $"[LegPond '{gameObject.name}'] HarvestedLegPool is not assigned.");
+
+            if (_farmFocusBehaviour == null)
+                throw new System.InvalidOperationException(
+                    $"[LegPond '{gameObject.name}'] _farmFocusBehaviour is not assigned. " +
+                    "Drag FarmFocusDetector from the player.");
+
+            _farmFocus = _farmFocusBehaviour as IFarmFocusSource;
+            if (_farmFocus == null)
+                throw new System.InvalidOperationException(
+                    $"[LegPond '{gameObject.name}'] _farmFocusBehaviour does not implement " +
+                    "IFarmFocusSource — assign FarmFocusDetector.");
 
             _config.Validate();
             _fryData.Validate();
@@ -330,6 +537,35 @@ namespace OrcFarm.Farming
         }
 
         // ── Helpers ────────────────────────────────────────────────────────────
+
+        private OrcQuality CalculateFishQuality(LegFishData fish)
+        {
+            float avg     = (fish.FeedScore + fish.CareScore) * 0.5f;
+            int   baseInt = (int)_quality;
+
+            if (avg >= _config.HighQualityThreshold)
+                return (OrcQuality)Mathf.Min(baseInt + 1, (int)OrcQuality.High);
+
+            if (avg >= _config.NormalQualityThreshold)
+                return _quality;
+
+            return (OrcQuality)Mathf.Max(baseInt - 1, (int)OrcQuality.Low);
+        }
+
+        private bool HasEmptyHands()
+        {
+            if (_carry != null && _carry.IsCarrying)
+                return false;
+
+            if (_inventory != null)
+            {
+                HotbarSlot slot = _inventory.GetSelectedSlot();
+                if (!slot.IsEmpty)
+                    return false;
+            }
+
+            return true;
+        }
 
         private ILegPondState CreateState(LegPondState state) => state switch
         {

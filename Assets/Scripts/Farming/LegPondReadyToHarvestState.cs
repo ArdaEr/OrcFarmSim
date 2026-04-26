@@ -1,8 +1,14 @@
 namespace OrcFarm.Farming
 {
     /// <summary>
-    /// Legs are fully grown. A Harvest interaction spawns the leg world object and
-    /// immediately places it in the player's carry slot. The pond resets to Empty.
+    /// Legs are fully grown. The player harvests one leg per E interaction.
+    ///
+    /// Each interaction takes the next alive fish, calculates its quality from condition
+    /// scores against the pond's BaseQuality, spawns a HarvestedLeg, and immediately
+    /// places it in the player's carry slot (dropping whatever was carried first).
+    ///
+    /// Dead fish are skipped — only alive fish produce a leg.
+    /// After all alive fish are harvested the pond transitions to Empty.
     /// </summary>
     internal sealed class LegPondReadyToHarvestState : ILegPondState
     {
@@ -17,8 +23,10 @@ namespace OrcFarm.Farming
 
         public void OnInteract()
         {
-            _ctx.SpawnAndCarryLeg();
-            _ctx.TransitionTo(LegPondState.Empty);
+            _ctx.HarvestNextLeg();
+
+            if (_ctx.AliveRemainingFishCount == 0)
+                _ctx.TransitionTo(LegPondState.Empty);
         }
     }
 }

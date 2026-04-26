@@ -1,4 +1,5 @@
 using OrcFarm.Core;
+using OrcFarm.Interaction;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -22,7 +23,7 @@ namespace OrcFarm.Player
     /// Setup: assign <c>_camera</c> (player camera) and set <c>_farmTileLayerMask</c>
     /// to the FarmTile layer in the Inspector.
     /// </summary>
-    public sealed class FarmFocusDetector : MonoBehaviour
+    public sealed class FarmFocusDetector : MonoBehaviour, IFarmFocusSource
     {
         [Tooltip("Player camera used as the raycast origin and direction.")]
         [SerializeField] private Camera _camera;
