@@ -38,6 +38,17 @@ namespace OrcFarm.Farming
         [SerializeField] private LegFryCarrySlot  _legFryCarrySlot;
         [SerializeField] private HarvestedLegPool _legPool;
 
+        [Header("Fish Visuals")]
+        [Tooltip("Optional visual fish prefab spawned when LegFry is stocked.")]
+        [SerializeField] private GameObject _fishPrefab;
+
+        [Tooltip("Where fish visuals spawn. If empty, this pond transform is used.")]
+        [SerializeField] private Transform _fishSpawnPoint;
+
+        [Tooltip("Random horizontal offset around the spawn point so multiple fish do not overlap.")]
+        [Min(0f)]
+        [SerializeField] private float _fishSpawnJitterRadius = 0.25f;
+
         [Tooltip("Assign the FarmFocusDetector component from the player. " +
                  "Ensures E interaction only fires when the player is looking at this pond.")]
         [SerializeField] private MonoBehaviour _farmFocusBehaviour;
@@ -65,6 +76,8 @@ namespace OrcFarm.Farming
         private CancellationTokenSource _readoutCts;
 
         private readonly List<LegFishData> _fish = new List<LegFishData>(8);
+        private readonly List<GameObject> _fishVisuals = new List<GameObject>(8);
+        private readonly List<LegGrowthVisual> _legGrowthVisuals = new List<LegGrowthVisual>(8);
 
 #if UNITY_EDITOR
         // ── Debug hooks (Play Mode only) ───────────────────────────────────────
@@ -182,6 +195,7 @@ namespace OrcFarm.Farming
                 _fish.Add(new LegFishData());
 
             _quality = _fryData.GetBaseQuality(tier);
+            SpawnFishVisual();
         }
 
         /// <inheritdoc/>
@@ -211,6 +225,7 @@ namespace OrcFarm.Farming
             leg.SetQuality(finalQuality);
             leg.Initialize(_carry);
             _carry.PickUpLeg(leg);
+            DespawnFishVisual();
 
             ShowHarvestReadout(finalQuality);
         }
@@ -227,10 +242,15 @@ namespace OrcFarm.Farming
                 _careGiven       = false;
                 _quality         = OrcQuality.Low;
                 _fish.Clear();
+                ClearFishVisuals();
             }
             else if (next == LegPondState.NeedsCare)
             {
                 _starvationTimer = 0f;
+            }
+            else if (next == LegPondState.ReadyToHarvest)
+            {
+                SetLegGrowthVisualProgress(1f);
             }
 
             LogTransition(_pondState, next);
@@ -306,6 +326,7 @@ namespace OrcFarm.Farming
                 }
 
                 fish.IsAlive = false;
+                DespawnFishVisual();
                 leg.SetQuality(quality);
                 leg.Initialize(_carry);
                 _carry.PickUpLeg(leg);
@@ -474,6 +495,12 @@ namespace OrcFarm.Farming
         {
             _readoutCts?.Cancel();
             _readoutCts?.Dispose();
+            ClearFishVisuals();
+        }
+
+        private void OnValidate()
+        {
+            _fishSpawnJitterRadius = Mathf.Max(0f, _fishSpawnJitterRadius);
         }
 
         private void Update()
@@ -482,6 +509,7 @@ namespace OrcFarm.Farming
             TickDebugHooks();
 #endif
             _stateMachine.Update();
+            UpdateLegGrowthVisuals();
         }
 
 #if UNITY_EDITOR
@@ -565,6 +593,75 @@ namespace OrcFarm.Farming
             }
 
             return true;
+        }
+
+        private void SpawnFishVisual()
+        {
+            ClearFishVisuals();
+
+            if (_fishPrefab == null)
+                return;
+
+            Transform spawnPoint = _fishSpawnPoint != null ? _fishSpawnPoint : transform;
+            Vector2 jitter = Random.insideUnitCircle * _fishSpawnJitterRadius;
+            Vector3 position = spawnPoint.position + new Vector3(jitter.x, 0f, jitter.y);
+            GameObject visual = Instantiate(_fishPrefab, position, spawnPoint.rotation, transform);
+
+            _fishVisuals.Add(visual);
+            LegGrowthVisual growthVisual = visual.GetComponentInChildren<LegGrowthVisual>();
+            if (growthVisual != null)
+            {
+                growthVisual.SetProgress(0f);
+                _legGrowthVisuals.Add(growthVisual);
+            }
+        }
+
+        private void DespawnFishVisual()
+        {
+            if (_fishVisuals.Count == 0)
+                return;
+
+            GameObject visual = _fishVisuals[0];
+            _fishVisuals.RemoveAt(0);
+            if (_legGrowthVisuals.Count > 0)
+                _legGrowthVisuals.RemoveAt(0);
+
+            if (visual != null)
+                Destroy(visual);
+        }
+
+        private void ClearFishVisuals()
+        {
+            for (int i = 0; i < _fishVisuals.Count; i++)
+            {
+                if (_fishVisuals[i] != null)
+                    Destroy(_fishVisuals[i]);
+            }
+
+            _fishVisuals.Clear();
+            _legGrowthVisuals.Clear();
+        }
+
+        private void UpdateLegGrowthVisuals()
+        {
+            if (_pondState == LegPondState.Growing || _pondState == LegPondState.NeedsCare)
+            {
+                float progress = _growthTimer / _config.GrowthDuration;
+                SetLegGrowthVisualProgress(progress);
+            }
+            else if (_pondState == LegPondState.ReadyToHarvest)
+            {
+                SetLegGrowthVisualProgress(1f);
+            }
+        }
+
+        private void SetLegGrowthVisualProgress(float progress)
+        {
+            for (int i = 0; i < _legGrowthVisuals.Count; i++)
+            {
+                if (_legGrowthVisuals[i] != null)
+                    _legGrowthVisuals[i].SetProgress(progress);
+            }
         }
 
         private ILegPondState CreateState(LegPondState state) => state switch
