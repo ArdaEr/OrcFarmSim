@@ -107,7 +107,6 @@ MonoBehaviour:
   intensity: 2
   renderers:
   - {fileID: 8780077152551756733}
-  - {fileID: 5723085908794156542}
 --- !u!1001 &5110724476909177047
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -185,11 +184,6 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 4405318b35b56c941974b9e3576484bd, type: 3}
---- !u!23 &5723085908794156542 stripped
-MeshRenderer:
-  m_CorrespondingSourceObject: {fileID: 684701739293142313, guid: 4405318b35b56c941974b9e3576484bd, type: 3}
-  m_PrefabInstance: {fileID: 5110724476909177047}
-  m_PrefabAsset: {fileID: 0}
 --- !u!4 &6530325934861127700 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 2039163077374236867, guid: 4405318b35b56c941974b9e3576484bd, type: 3}
