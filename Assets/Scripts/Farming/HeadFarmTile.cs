@@ -20,7 +20,7 @@ namespace OrcFarm.Farming
     /// Inspector. All three are mandatory — Awake logs and disables on any missing ref.
     /// </summary>
     [RequireComponent(typeof(BoxCollider))]
-    public class HeadFarmTile : MonoBehaviour, IInteractable, IHeadTileStateContext, IFarmActionTarget
+    public class HeadFarmTile : MonoBehaviour, IInteractable, IHeadTileStateContext, IFarmActionTarget, IFarmFocusTarget
     {
         [Tooltip("BoxCollider that defines this tile's interactable footprint. " +
                  "Adjust size and center here — do not resize via Transform scale.")]
@@ -38,9 +38,8 @@ namespace OrcFarm.Farming
         [Tooltip("Scene CarryController used to initialize harvested heads so the player can pick them up.")]
         [SerializeField] private CarryController _carryController;
 
-        [Tooltip("Assign the FarmFocusDetector component from the player. " +
-                 "Ensures E interaction only fires when the player is looking at this tile.")]
-        [SerializeField] private MonoBehaviour _farmFocusBehaviour;
+        [Tooltip("Optional OutlineGlowTarget component enabled only while this tile is focused.")]
+        [SerializeField] private MonoBehaviour _outlineGlowTarget;
 
         [Header("Growth Visual")]
         [Tooltip("Object that scales while this tile is Growing. Optional; leave empty for no crop growth visual.")]
@@ -74,7 +73,7 @@ namespace OrcFarm.Farming
         [HideInInspector]
         [SerializeField] private bool _indexAssigned;
 
-        private IFarmFocusSource     _farmFocus;
+        private bool                 _isFarmFocused;
         private float                _timer;
         private HeadTileState        _tileState = HeadTileState.Empty;
         private HeadTileStateMachine _stateMachine;
@@ -96,7 +95,7 @@ namespace OrcFarm.Farming
         /// </remarks>
         public bool CanInteract =>
             enabled && _indexAssigned && _stateMachine.CanInteract &&
-            _farmFocus?.CurrentTarget == (IFarmActionTarget)this;
+            _isFarmFocused;
 
         /// <inheritdoc/>
         public void OnInteract()
@@ -301,6 +300,17 @@ namespace OrcFarm.Farming
             SetCareScore(Mathf.Min(1f, _careScore + _data.CareRestoreAmount));
         }
 
+        // ── IFarmFocusTarget ──────────────────────────────────────────────────
+
+        /// <inheritdoc/>
+        public void SetFarmFocused(bool focused)
+        {
+            _isFarmFocused = focused;
+
+            if (_outlineGlowTarget != null)
+                _outlineGlowTarget.enabled = focused;
+        }
+
         // ── Public read ────────────────────────────────────────────────────────
 
         /// <summary>Current lifecycle state. Exposed for HUD and debug inspection.</summary>
@@ -388,29 +398,12 @@ namespace OrcFarm.Farming
                 return;
             }
 
-            if (_farmFocusBehaviour == null)
-            {
-                Debug.LogError(
-                    $"[HeadFarmTile '{gameObject.name}'] _farmFocusBehaviour is not assigned. " +
-                    "Drag FarmFocusDetector from the player.", this);
-                enabled = false;
-                return;
-            }
-
-            _farmFocus = _farmFocusBehaviour as IFarmFocusSource;
-            if (_farmFocus == null)
-            {
-                Debug.LogError(
-                    $"[HeadFarmTile '{gameObject.name}'] _farmFocusBehaviour does not implement " +
-                    "IFarmFocusSource — assign FarmFocusDetector.", this);
-                enabled = false;
-                return;
-            }
-
             _growthVisualStartScale   = Mathf.Max(0f, _growthVisualStartScale);
             _growthVisualHarvestScale = Mathf.Max(_growthVisualStartScale, _growthVisualHarvestScale);
 
             _data.Validate();
+
+            SetFarmFocused(false);
 
 #if UNITY_EDITOR
             _debugForceReadyToHarvest = false;
@@ -427,6 +420,11 @@ namespace OrcFarm.Farming
             TickDebugHooks();
 #endif
             _stateMachine.Update();
+        }
+
+        private void OnDisable()
+        {
+            SetFarmFocused(false);
         }
 
         // ── Debug hooks ────────────────────────────────────────────────────────

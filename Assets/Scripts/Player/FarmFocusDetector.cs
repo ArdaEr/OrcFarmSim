@@ -50,6 +50,7 @@ namespace OrcFarm.Player
         // ── Runtime state ──────────────────────────────────────────────────────
 
         private IFarmActionTarget _currentTarget;
+        private IFarmFocusTarget  _currentFocusTarget;
 
         // Cached so TryGetComponent is called only when the hit collider changes (§5.2).
         private Collider _lastHitCollider;
@@ -103,6 +104,16 @@ namespace OrcFarm.Player
             }
         }
 
+        private void OnDisable()
+        {
+            ClearFocusTarget();
+            ClearHighlight();
+
+            _lastHitCollider = null;
+            _currentTarget   = null;
+            CurrentContext   = FarmActionContext.None;
+        }
+
         // ── Private helpers ────────────────────────────────────────────────────
 
         private void UpdateFocus()
@@ -117,22 +128,47 @@ namespace OrcFarm.Player
                 // Only call TryGetComponent and update highlight when the collider changes.
                 if (hitCollider != _lastHitCollider)
                 {
+                    ClearFocusTarget();
                     ClearHighlight();
                     _lastHitCollider = hitCollider;
                     hitCollider.TryGetComponent(out _currentTarget);
 
                     if (_currentTarget != null)
+                    {
+                        ApplyFocusTarget(_currentTarget);
                         ApplyHighlight(hitCollider.gameObject);
+                    }
                 }
             }
             else
             {
                 if (_lastHitCollider != null)
+                {
+                    ClearFocusTarget();
                     ClearHighlight();
+                }
 
                 _lastHitCollider = null;
                 _currentTarget   = null;
             }
+        }
+
+        private void ApplyFocusTarget(IFarmActionTarget target)
+        {
+            if (target is not IFarmFocusTarget focusTarget)
+                return;
+
+            _currentFocusTarget = focusTarget;
+            _currentFocusTarget.SetFarmFocused(true);
+        }
+
+        private void ClearFocusTarget()
+        {
+            if (_currentFocusTarget == null)
+                return;
+
+            _currentFocusTarget.SetFarmFocused(false);
+            _currentFocusTarget = null;
         }
 
         private void ApplyHighlight(GameObject target)

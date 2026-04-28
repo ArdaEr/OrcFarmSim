@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 6613510315396266069}
   - component: {fileID: 6579855717234232582}
   - component: {fileID: 6011308483063186897}
+  - component: {fileID: 6761178281579633466}
   m_Layer: 7
   m_Name: HeadFarmTile
   m_TagString: Untagged
@@ -81,6 +82,7 @@ MonoBehaviour:
   _headPool: {fileID: 0}
   _inventory: {fileID: 0}
   _carryController: {fileID: 0}
+  _outlineGlowTarget: {fileID: 6761178281579633466}
   _growthVisual: {fileID: 6530325934861127700}
   _growthVisualStartScale: 0.2
   _growthVisualHarvestScale: 1
@@ -89,6 +91,23 @@ MonoBehaviour:
   _row: 0
   _column: 0
   _indexAssigned: 1
+--- !u!114 &6761178281579633466
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8899310346703550373}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4cf2439932845f94fa56ae08f649f718, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Demo_OutlineGlowTarget
+  color: {r: 0.8407482, g: 1, b: 0.13679248, a: 1}
+  intensity: 2
+  renderers:
+  - {fileID: 8780077152551756733}
+  - {fileID: 5723085908794156542}
 --- !u!1001 &5110724476909177047
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -166,6 +185,11 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 4405318b35b56c941974b9e3576484bd, type: 3}
+--- !u!23 &5723085908794156542 stripped
+MeshRenderer:
+  m_CorrespondingSourceObject: {fileID: 684701739293142313, guid: 4405318b35b56c941974b9e3576484bd, type: 3}
+  m_PrefabInstance: {fileID: 5110724476909177047}
+  m_PrefabAsset: {fileID: 0}
 --- !u!4 &6530325934861127700 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 2039163077374236867, guid: 4405318b35b56c941974b9e3576484bd, type: 3}
@@ -271,5 +295,10 @@ Transform:
 --- !u!4 &6776611187203404398 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: d51487d77626b7b4fa7e770f99a05ceb, type: 3}
+  m_PrefabInstance: {fileID: 6449685206467024261}
+  m_PrefabAsset: {fileID: 0}
+--- !u!23 &8780077152551756733 stripped
+MeshRenderer:
+  m_CorrespondingSourceObject: {fileID: 2330888935960606264, guid: d51487d77626b7b4fa7e770f99a05ceb, type: 3}
   m_PrefabInstance: {fileID: 6449685206467024261}
   m_PrefabAsset: {fileID: 0}
