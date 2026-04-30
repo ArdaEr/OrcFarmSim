@@ -23,3 +23,8 @@ MonoBehaviour:
   _feedDecayRate: 0.005
   _careDecayRate: 0.002
   _careRestoreAmount: 0.5
+  _needsCareDuration: 5
+  _spawnOffsetMin: 1.2
+  _spawnOffsetMax: 1.8
+  _highQualityThreshold: 0.75
+  _normalQualityThreshold: 0.4

@@ -13,7 +13,7 @@ namespace OrcFarm.Farming
         internal HeadTileReadyToHarvestState(IHeadTileStateContext ctx) => _ctx = ctx;
 
         public bool   CanInteract    => true;
-        public string InteractPrompt => "Harvest";
+        public string InteractPrompt => "Harvest head";
         public void   OnEnter()      => _ctx.SetGrowthVisualProgress(1f);
         public void   OnExit()       { }
         public void   Update()       { }

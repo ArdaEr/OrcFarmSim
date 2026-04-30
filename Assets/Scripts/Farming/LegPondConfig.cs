@@ -79,6 +79,11 @@ namespace OrcFarm.Farming
         [Range(0f, 1f)]
         [SerializeField] private float _normalQualityThreshold = 0.4f;
 
+        [Tooltip("Maximum number of fish the pond can hold. " +
+                 "Stocking is capped at this value regardless of how many LegFry the player has.")]
+        [Min(1)]
+        [SerializeField] private int _pondCapacity = 4;
+
         /// <summary>Seconds after stocking before growth begins.</summary>
         public float StockedDelay => _stockedDelay;
 
@@ -138,6 +143,9 @@ namespace OrcFarm.Farming
         /// </summary>
         public float NormalQualityThreshold => _normalQualityThreshold;
 
+        /// <summary>Maximum number of fish the pond can hold. Stocking is capped at this value.</summary>
+        public int PondCapacity => _pondCapacity;
+
         /// <summary>Absolute seconds-after-stocking when the care checkpoint opens.</summary>
         public float CareCheckpointTime => _growthDuration * _careCheckpointFraction;
 
@@ -159,6 +167,7 @@ namespace OrcFarm.Farming
             _spawnOffsetMax           = Mathf.Max(_spawnOffsetMin, _spawnOffsetMax);
             _highQualityThreshold     = Mathf.Clamp01(_highQualityThreshold);
             _normalQualityThreshold   = Mathf.Clamp(_normalQualityThreshold, 0f, _highQualityThreshold);
+            _pondCapacity             = Mathf.Max(1, _pondCapacity);
         }
 
         /// <summary>
@@ -210,6 +219,10 @@ namespace OrcFarm.Farming
             if (_normalQualityThreshold >= _highQualityThreshold)
                 throw new System.InvalidOperationException(
                     $"[LegPondConfig '{name}'] NormalQualityThreshold must be < HighQualityThreshold.");
+
+            if (_pondCapacity <= 0)
+                throw new System.InvalidOperationException(
+                    $"[LegPondConfig '{name}'] PondCapacity must be > 0.");
         }
     }
 }

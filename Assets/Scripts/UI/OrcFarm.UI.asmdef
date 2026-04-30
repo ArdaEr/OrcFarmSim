@@ -10,6 +10,7 @@
         "OrcFarm.Carry",
         "OrcFarm.Storage",
         "OrcFarm.Workers",
+        "OrcFarm.Assembly",
         "Unity.TextMeshPro",
         "Unity.InputSystem",
         "VContainer"

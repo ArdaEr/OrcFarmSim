@@ -1,4 +1,5 @@
 using System.Collections;
+using OrcFarm.Assembly;
 using OrcFarm.Carry;
 using OrcFarm.Farming;
 using OrcFarm.Interaction;
@@ -81,7 +82,9 @@ namespace OrcFarm.UI
         private LegPondState  _lastPondState            = (LegPondState)(-1);
         private int           _lastAliveRemainingCount  = -1;
         private HeadTileState _lastTileState            = (HeadTileState)(-1);
-        private bool          _lastCanSecondary;                        // tracks Q prompt visibility
+        private bool          _lastAssemblyHeadFilled;
+        private bool          _lastAssemblyLegFilled;
+        private bool          _lastCanSecondary;
         private bool          _loggedMissingInjection;
 
         // ── Harvest readout ────────────────────────────────────────────────────
@@ -198,9 +201,14 @@ namespace OrcFarm.UI
             bool pondChanged      = focusedPond != null &&
                                     (focusedPond.State != _lastPondState ||
                                      aliveRemaining != _lastAliveRemainingCount);
-            // Growing tiles rebuild every frame so the F/W/C scores stay live.
-            bool          tileChanged     = target is HeadFarmTile ht &&
-                                            (ht.State != _lastTileState || ht.State == HeadTileState.Growing);
+            bool          tileChanged      = target is HeadFarmTile ht &&
+                                             ht.State != _lastTileState;
+            AssemblyStation focusedStation = target as AssemblyStation;
+            bool assemblyChanged = focusedStation != null &&
+                                   (focusedStation.HeadFilled != _lastAssemblyHeadFilled ||
+                                    focusedStation.LegFilled  != _lastAssemblyLegFilled  ||
+                                    _carry.IsCarrying         != _lastCarrying            ||
+                                    _carry.IsCarryingLeg      != _lastCarryingLeg);
             bool          canSecondary    = target is ISecondaryInteractable s && s.CanSecondaryInteract;
             bool          secondaryChanged = canSecondary != _lastCanSecondary;
 
@@ -213,7 +221,7 @@ namespace OrcFarm.UI
                 ShowHarvestReadout("Harvested head — " + htHarvest.LastHarvestQualityLabel + " quality");
             }
 
-            if (target == _lastTarget && !plotChanged && !pondChanged && !tileChanged && !secondaryChanged)
+            if (target == _lastTarget && !plotChanged && !pondChanged && !tileChanged && !assemblyChanged && !secondaryChanged)
                 return;
 
             _lastTarget              = target;
@@ -222,6 +230,11 @@ namespace OrcFarm.UI
             if (target is FarmPlot fp2)      _lastPlotState  = fp2.State;
             if (focusedPond != null)         _lastPondState  = focusedPond.State;
             if (target is HeadFarmTile ht2)  _lastTileState  = ht2.State;
+            if (focusedStation != null)
+            {
+                _lastAssemblyHeadFilled = focusedStation.HeadFilled;
+                _lastAssemblyLegFilled  = focusedStation.LegFilled;
+            }
 
             if (target == null || !target.CanInteract)
             {
@@ -249,9 +262,12 @@ namespace OrcFarm.UI
                 return "E:  " + GetFarmPlotAction(plot.State);
 
             if (target is LegPond pond)
-                return pond.State == LegPondState.ReadyToHarvest
-                    ? "E:  " + pond.HarvestPrompt
-                    : "E:  " + GetLegPondAction(pond.State);
+            {
+                string pondAction = pond.State == LegPondState.ReadyToHarvest
+                    ? pond.HarvestPrompt
+                    : GetLegPondAction(pond.State);
+                return string.IsNullOrEmpty(pondAction) ? string.Empty : "E:  " + pondAction;
+            }
 
             if (target is HarvestedHead)
                 return "E:  Pick up head";
@@ -268,7 +284,16 @@ namespace OrcFarm.UI
                     : "E:  Retrieve head  (" + storage.StoredCount + ")";
 
             if (target is HeadFarmTile tile)
-                return "E:  " + tile.InteractPrompt;
+            {
+                string tilePrompt = tile.InteractPrompt;
+                return string.IsNullOrEmpty(tilePrompt) ? string.Empty : "E:  " + tilePrompt;
+            }
+
+            if (target is AssemblyStation station)
+            {
+                string stationPrompt = GetAssemblyStationPrompt(station);
+                return string.IsNullOrEmpty(stationPrompt) ? string.Empty : "E:  " + stationPrompt;
+            }
 
             if (target is KeepInteractable ki)
             {
@@ -354,12 +379,29 @@ namespace OrcFarm.UI
 
         private static string GetLegPondAction(LegPondState state) => state switch
         {
-            LegPondState.Empty          => "Stock pond",
-            LegPondState.NeedsCare      => "Feed pond",
-            LegPondState.ReadyToHarvest => "Harvest legs",
-            LegPondState.Starved        => "Clear pond",
-            _                           => string.Empty,
+            LegPondState.Empty   => "Stock pond",
+            LegPondState.Starved => "Clear dead pond",
+            _                    => string.Empty,
         };
+
+        private string GetAssemblyStationPrompt(AssemblyStation station)
+        {
+            bool headFilled = station.HeadFilled;
+            bool legFilled  = station.LegFilled;
+            bool carrying   = _carry.IsCarrying;
+
+            if (headFilled && legFilled)
+                return carrying ? "Empty hands needed to assemble" : "Assemble orc";
+
+            if (!carrying)
+            {
+                if (headFilled) return "Take back head";
+                if (legFilled)  return "Take back leg";
+                return string.Empty;
+            }
+
+            return _carry.IsCarryingLeg ? "Deposit leg" : "Deposit head";
+        }
 
         // ── Status ─────────────────────────────────────────────────────────────
 

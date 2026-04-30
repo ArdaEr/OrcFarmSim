@@ -32,18 +32,10 @@ namespace OrcFarm.Farming
         public bool CanInteract => true;
 
         /// <summary>
-        /// Live score readout shown to the player while the crop is growing.
-        /// Format: "Feed [F:x.x W:x.x C:x.x]"
-        ///
-        /// Note: this builds a new string each time it is queried. The HUD currently
-        /// falls back to a generic prompt for HeadFarmTile, so this is not called
-        /// per-frame. When the HUD is updated to surface this prompt, consider
-        /// rebuilding only when score values change by ≥ 0.1 (one F1 step).
+        /// No E prompt during Growing — the player acts via F/W/C buttons in FarmActionPanel.
+        /// HeadFarmTile.OnInteract() returns early for Growing, so E does nothing.
         /// </summary>
-        public string InteractPrompt =>
-            "Feed [F:" + _ctx.FeedScore.ToString("F1") +
-            " W:" + _ctx.WaterScore.ToString("F1") +
-            " C:" + _ctx.CareScore.ToString("F1") + "]";
+        public string InteractPrompt => string.Empty;
 
         public void OnEnter()
         {

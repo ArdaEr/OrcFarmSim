@@ -31,8 +31,8 @@ namespace OrcFarm.Farming
         LegFryItem CarriedLegFry { get; }
 
         /// <summary>
-        /// Tries to stock the pond using a LegFry from the player's selected hotbar slot.
-        /// Consumes one item and initializes fish at Normal tier.
+        /// Tries to stock the pond using LegFry from the player's selected hotbar slot.
+        /// Consumes min(slotCount, PondCapacity) items and initializes that many fish.
         /// Returns true if stocking succeeded.
         /// </summary>
         bool TryStockFromHotbar();
@@ -71,11 +71,18 @@ namespace OrcFarm.Farming
         void ConsumeCarriedLegFry();
 
         /// <summary>
-        /// Clears the existing fish list and populates it with new <see cref="LegFishData"/>
-        /// instances sized by <paramref name="tier"/>. Also sets the pond's base quality to
-        /// the tier's <see cref="LegFryData.GetBaseQuality"/> value.
+        /// Clears the existing fish list and populates it with <paramref name="count"/> new
+        /// <see cref="LegFishData"/> instances. Sets the pond's base quality from
+        /// <paramref name="tier"/>. Pass the result of <see cref="GetCappedFishCount"/>
+        /// for the carry-stocking path so pond capacity is respected.
         /// </summary>
-        void InitializeFish(LegFryTier tier);
+        void InitializeFish(LegFryTier tier, int count);
+
+        /// <summary>
+        /// Returns the fish count for <paramref name="tier"/> from LegFryData, capped at
+        /// <see cref="LegPondConfig.PondCapacity"/>.
+        /// </summary>
+        int GetCappedFishCount(LegFryTier tier);
 
         /// <summary>
         /// Spawns a HarvestedLeg at a random offset near the pond and immediately places

@@ -179,24 +179,30 @@ namespace OrcFarm.Farming
             if (slot.SlotItemType != ItemType.LegFry || slot.IsEmpty)
                 return false;
 
-            if (!_inventory.TryConsumeFromSelectedSlot(1))
+            int fishCount = Mathf.Min(slot.Count, _config.PondCapacity);
+
+            if (!_inventory.TryConsumeFromSelectedSlot(fishCount))
                 return false;
 
-            InitializeFish(LegFryTier.Normal);
+            // Hotbar slots track ItemType only — tier is not available; Normal tier used for quality.
+            InitializeFish(LegFryTier.Normal, fishCount);
             return true;
         }
 
         /// <inheritdoc/>
-        public void InitializeFish(LegFryTier tier)
+        public void InitializeFish(LegFryTier tier, int count)
         {
             _fish.Clear();
-            int count = _fryData.GetFishCount(tier);
             for (int i = 0; i < count; i++)
                 _fish.Add(new LegFishData());
 
             _quality = _fryData.GetBaseQuality(tier);
             SpawnFishVisual();
         }
+
+        /// <inheritdoc/>
+        public int GetCappedFishCount(LegFryTier tier) =>
+            Mathf.Min(_fryData.GetFishCount(tier), _config.PondCapacity);
 
         /// <inheritdoc/>
         public void SpawnAndCarryLeg()
@@ -444,7 +450,7 @@ namespace OrcFarm.Farming
         /// Dynamic prompt shown by InteractHUD during ReadyToHarvest.
         /// Rebuilt only when alive fish count changes — string concat acceptable outside hot path.
         /// </summary>
-        public string HarvestPrompt => "Harvest leg  (" + AliveRemainingFishCount + " remaining)";
+        public string HarvestPrompt => "Harvest leg (" + AliveRemainingFishCount + " remaining)";
 
         // ── Unity lifecycle ────────────────────────────────────────────────────
 
@@ -513,6 +519,26 @@ namespace OrcFarm.Farming
         }
 
 #if UNITY_EDITOR
+        /// <summary>
+        /// Returns a formatted string with current state and per-fish scores.
+        /// Called by <see cref="OrcFarm.UI.LegPondDebugPanel"/> each frame.
+        /// </summary>
+        public string GetDebugInfo()
+        {
+            var sb = new System.Text.StringBuilder();
+            sb.Append("State: ").AppendLine(_pondState.ToString());
+            sb.Append("Fish: ").Append(AliveRemainingFishCount).Append('/').Append(_fish.Count).AppendLine(" alive");
+            for (int i = 0; i < _fish.Count; i++)
+            {
+                LegFishData f = _fish[i];
+                sb.Append("Fish ").Append(i + 1)
+                  .Append(": Feed ").Append(Mathf.RoundToInt(f.FeedScore * 100)).Append('%')
+                  .Append(" Care ").Append(Mathf.RoundToInt(f.CareScore * 100)).Append('%')
+                  .Append(' ').AppendLine(f.IsAlive ? "Alive" : "Dead");
+            }
+            return sb.ToString();
+        }
+
         // Runs before the state machine so the forced state is active for the
         // remainder of this frame's tick. Both fields are cleared before the
         // transition fires so a single inspector tick never fires twice.
@@ -542,7 +568,7 @@ namespace OrcFarm.Farming
                 return;
 
             // String concat is acceptable here — OnInteract is event-driven, not per-frame (§3.3).
-            _resultText.text = "Harvested leg  —  " + quality + " quality";
+            _resultText.text = "Harvested leg — " + quality + " quality";
 
             _readoutCts?.Cancel();
             _readoutCts?.Dispose();

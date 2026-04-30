@@ -85,7 +85,7 @@ namespace OrcFarm.Assembly
         [Min(0.1f)]
         [SerializeField] private float _readoutClearDelay = 4f;
 
-        private static readonly string MissingPartsHint = "You need a head and a leg to assemble";
+        private static readonly string MissingPartsHint = "Need a head and a leg to assemble";
 
         // Cached to avoid a new allocation each time the readout is shown (§3.9).
         private WaitForSeconds _clearWait;
@@ -97,6 +97,12 @@ namespace OrcFarm.Assembly
 
         private HarvestedHead _depositedHead;
         private HarvestedLeg  _depositedLeg;
+
+        /// <summary>True when a HarvestedHead has been deposited and is waiting in the slot.</summary>
+        public bool HeadFilled => _depositedHead != null;
+
+        /// <summary>True when a HarvestedLeg has been deposited and is waiting in the slot.</summary>
+        public bool LegFilled  => _depositedLeg  != null;
 
         // ── IInteractable ──────────────────────────────────────────────────────
 
@@ -130,9 +136,14 @@ namespace OrcFarm.Assembly
             bool headFilled = _depositedHead != null;
             bool legFilled  = _depositedLeg  != null;
 
-            // Both slots filled → assemble regardless of what the player is carrying (req 9).
+            // Both slots filled: player must have empty hands to assemble.
             if (headFilled && legFilled)
             {
+                if (_carry.IsCarrying)
+                {
+                    ShowHintText("Empty hands needed to assemble");
+                    return;
+                }
                 Assemble();
                 return;
             }

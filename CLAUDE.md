@@ -80,45 +80,49 @@ OrcFarm.Inventory, OrcFarm.Carry, OrcFarm.Storage
 Completed and stable:
 - First-person movement, PlayerLook, PlayerMover, PlayerInteractor
 - InteractionDetector with OnTriggerEnter and fallback OverlapSphere scan
-- FarmPlot state machine: Empty → Prepared → Fertilized → Planted →
-  Growing → NeedsCare → ReadyToHarvest → FailedCrop
-- One care checkpoint, missing care causes FailedCrop
-- FailedCrop resets to Empty on interaction with no refund
-- FarmPlot debug hooks: Force NeedsCare and Force ReadyToHarvest
-  one-shot inspector bools in Update, not OnValidate
-- Inventory with HeadSeed, Fertilizer, HarvestedHead item types
-- PlayerInventory with debug refill via one-shot inspector bool
-- Carry system — one head at a time, reuses same world object,
-  drop with small random horizontal motion, collider disabled while carried
-- Storage system — HeadStorageContainer, LIFO retrieval, StoredCount
-- Harvest — head spawns at random XZ offset around plot, lands on ground,
-  player picks up manually, no auto-carry
-- AssemblyStation — consumes carried head, spawns AssembledOrc from prefab,
-  fixed placeholder parts for torso arms legs, result readout auto-clears
-- HaulerWorker on AssembledOrc GameObject alongside KeepInteractable
-- Keep flow: orc walks to wait point, then begins hauling loop
-- Store flow: orc walks to OrcHoldingPen standing spot
-- OrcHoldingPen: serialized standing spots, TrySellOne(), StoredCount
-- BazaarPoint: sells stored orcs, quality-based pricing
-- PlayerWallet: bronze currency, Add(), Balance property
-- OrcQuality enum: Low Normal High
-- HUD: interact prompts, plot state text, seed count,
-  fertilizer count, bronze balance
+- Hotbar system with 5 slots, number key selection, scroll selection, and deselect by pressing selected number again
+- Hotbar items: HeadSeed, Fertilizer, FeedItem, LegFry, WaterItem
+- HarvestedHead and HarvestedLeg are physical world objects, not hotbar items
+- FarmActionUI with crosshair, FarmFocusDetector, tile highlight, and F/W/C action buttons
+- HeadFarmTile system with 3x3 HeadFarmPlot grid
+- HeadFarmTile flow: Empty → Tilled → Seeded → Covered → Growing → ReadyToHarvest
+- HeadFarmTile death flow: Growing → Dead → Empty when cleared
+- HeadFarmTile tracks FeedScore, WaterScore, and CareScore
+- LegPond system with LegFry stocking, per-fish FeedScore, CareScore, and IsAlive tracking
+- LegPond supports Growing, NeedsCare, ReadyToHarvest, and Dead states
+- LegPond harvests one HarvestedLeg per E interaction from alive fish only
+- HUD/readout supports interact prompts and temporary result messages
+- Harvest result readout shows harvested part type and quality
+- AssemblyStation accepts direct head and leg deposits with two internal slots
+- AssemblyStation allows taking back deposited parts before assembly
+- AssemblyStation assembles one orc from deposited head and leg
+- Editor-only LegPond debug panel exists and must be preserved
+
+Recently scoped / in progress:
+- Trait Assignment V1
+  - Core trait enums and influence flags
+  - Part-local trait candidates stored on HarvestedHead and HarvestedLeg
+  - Assembly chooses final trait from head and leg candidates
+  - Final trait displayed in result UI
+  - No runtime worker behavior changes yet
 
 Not built yet:
-- Leg pond farming
-- Torso and arm farming
-- Bazaar buy point for parts
+- Trait runtime behavior effects
+- Hauler trait behavior integration
+- Bazaar buy point for torso and arms
 - One normal contract
 - One lord quest and Prestige counter
 - Lord seed delivery system
-- Trait runtime system
-- Pool leak fix for assembly-consumed heads
 - Save/load
 - Audio
 - Tutorial
 - Multiple worker roles
-- Additional instability types beyond movement slowdown
+- Additional instability types beyond current movement slowdown
+- Torso farming
+- Arm farming
+- Seasons
+- Attacks/events
+- Ring/artifact progression
 
 ---
 
@@ -146,26 +150,25 @@ Every task prompt must include:
 
 ## Architecture rules (§1)
 
-§1.1  No business logic in MonoBehaviours that serve as Views
-§1.2  No UnityEngine imports in Model layer except value types
-§1.3  All dependencies via VContainer constructor injection or [Inject]
-§1.4  No static singletons — automatic rejection
-§1.5  Controllers orchestrate — never manipulate Transforms or UI directly
-§1.6  One responsibility per class — no "And" classes or multi-concern Managers
-§1.7  No upward dependency flow — UI may depend on Core, Core never references UI
-§1.8  Every injected service must have a corresponding interface
-§1.9  States access owner controller only through a context interface
+§1.1  Keep architecture small and concrete
+§1.2  Do not introduce VContainer, dependency injection, service locators, or event buses
+§1.3  Do not introduce MessagePipe or new signal systems
+§1.4  No static singleton managers
+§1.5  Keep changes scoped to the requested assembly
+§1.6  Do not refactor stable systems unless a compile error forces it
+§1.7  UI may read simple public properties or explicit read-only methods, but must not own gameplay state
+§1.8  Core may contain shared enums, value structs, interfaces, and helper methods only
+§1.9  Avoid generic frameworks unless the task explicitly asks for one
 
 ---
 
-## Event system rules (§2)
+## Event / communication rules (§2)
 
-§2.1  All inter-system communication via MessagePipe signals
-§2.2  Signals are readonly structs with immutable fields
-§2.3  All signal types registered in RootLifetimeScope
-§2.4  Every Subscribe() must have a corresponding Dispose()
-§2.5  No UnityEvent for system-to-system communication
-§2.6  Signal naming: past tense for notifications, imperative for commands
+§2.1  Prefer direct serialized references or explicit method calls for this prototype
+§2.2  Do not add an event bus
+§2.3  Do not add MessagePipe
+§2.4  Do not add UnityEvent-based system communication unless explicitly requested
+§2.5  Keep cross-assembly communication minimal and readable
 
 ---
 
@@ -186,12 +189,10 @@ Every task prompt must include:
 
 ## Async rules (§4)
 
-§4.1  Zero coroutines — all async work via UniTask
-§4.2  Every async method must accept and propagate CancellationToken
-§4.3  Fire-and-forget must use .Forget(exceptionHandler)
-§4.4  Async entry points implement IAsyncStartable
-§4.5  All external async operations wrapped in try-catch
-§4.6  No async void — use async UniTask or async UniTaskVoid
+§4.1  Avoid async systems unless the task explicitly requires them
+§4.2  Coroutines are allowed for simple UI auto-clear timers if already used by the project
+§4.3  Do not add UniTask unless it already exists in the project and the task explicitly needs it
+§4.4  Do not convert existing simple coroutine/UI timing code into async code during unrelated tasks
 
 ---
 
@@ -205,6 +206,22 @@ Every task prompt must include:
 §5.6  Animator parameters accessed via hashed IDs cached in static readonly int
 §5.7  No Debug.Log in per-frame code — wrap with [Conditional("UNITY_EDITOR")]
 §5.9  No hard-coded layer indices or tag strings
+
+## Layer rules (§5.10)
+
+§5.10.1 Never use hard-coded layer indices
+§5.10.2 Use LayerMask.NameToLayer("LayerName") or serialized LayerMask fields
+§5.10.3 Approved layers:
+- Default (0)
+- Player (8)
+- Interactable (9)
+- Carriable (10)
+- Worker (11)
+- FarmTile (12)
+- HoldingPen (13)
+§5.10.4 If a task requires a layer not listed here, stop and report it in Assumptions
+§5.10.5 Never set the Physics collision matrix via code
+§5.10.6 Note required collision matrix changes under Inspector risks
 
 ---
 
@@ -288,10 +305,22 @@ High = 50 bronze
 
 ## Demo scope
 
-Two farming methods: head (pull from ground) and legs (pond fishing)
-Full orc rule intact: player grows head and legs, buys torso and arms from bazaar
+Two farming methods: head and legs
+Head method: tile/grid farming, pull harvest
+Leg method: pond stocking and leg harvest
+Full orc rule remains the design direction: head, torso, arms, legs
+Current prototype assembly uses head + leg only as a temporary implementation step
 One worker role: hauler
-One instability type: movement slowdown
-Traits: Hardworking, Clumsy, Lazy, Angry, Thief, Resilient
+One instability type for demo: movement slowdown first
 Quality tiers: Low, Normal, High
-Prestige: 2 visible ranks maximum you can use them
+Trait Assignment V1 traits:
+- Brutish
+- Resilient
+- Diligent
+- Bone-Idle
+- Clumsy
+- Twitchy
+Trait runtime behavior effects are not active yet
+Prestige: 2 visible ranks maximum later, not active in current prototype
+
+

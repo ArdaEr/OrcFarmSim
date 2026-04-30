@@ -21,9 +21,10 @@ namespace OrcFarm.Farming
             LegFryItem carried = _ctx.CarriedLegFry;
             if (carried != null)
             {
-                LegFryTier tier = carried.Tier;
+                LegFryTier tier  = carried.Tier;
+                int        count = _ctx.GetCappedFishCount(tier);
                 _ctx.ConsumeCarriedLegFry();
-                _ctx.InitializeFish(tier);
+                _ctx.InitializeFish(tier, count);
                 _ctx.TransitionTo(LegPondState.Stocked);
                 return;
             }

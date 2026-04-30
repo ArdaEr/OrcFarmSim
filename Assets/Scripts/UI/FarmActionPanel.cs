@@ -1,7 +1,9 @@
+using System.Collections;
 using OrcFarm.Core;
 using OrcFarm.Player;
 using TMPro;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace OrcFarm.UI
 {
@@ -61,6 +63,14 @@ namespace OrcFarm.UI
         [Range(0f, 1f)]
         [SerializeField] private float _inactiveAlpha = 0.4f;
 
+        [Header("Reason Text")]
+        [Tooltip("Optional. TMP element that shows why a greyed action is unavailable when the player presses its key.")]
+        [SerializeField] private TextMeshProUGUI _reasonText;
+
+        [Tooltip("Seconds before the reason message auto-clears.")]
+        [Min(0.1f)]
+        [SerializeField] private float _reasonClearDelay = 2f;
+
         // ── Constants ──────────────────────────────────────────────────────────
 
         private static readonly Color ActiveTextColor = Color.white;
@@ -68,6 +78,11 @@ namespace OrcFarm.UI
         // ── Cached inactive color — built once in Awake, no per-frame alloc ───
 
         private Color _inactiveColor;
+
+        // ── Reason text ────────────────────────────────────────────────────────
+
+        private WaitForSeconds _reasonClearWait;
+        private Coroutine      _reasonClearCoroutine;
 
         // ── Cached button state ────────────────────────────────────────────────
 
@@ -103,6 +118,13 @@ namespace OrcFarm.UI
                 _inactiveTextColor.g,
                 _inactiveTextColor.b,
                 _inactiveAlpha);
+
+            _reasonClearWait = new WaitForSeconds(_reasonClearDelay);
+
+            if (_reasonText != null)
+                _reasonText.text = string.Empty;
+            else
+                Debug.LogWarning("[FarmActionPanel] _reasonText is not assigned — reason messages will not show.", this);
 
             SetButtonState(_feedButton,  _feedText,  false, false);
             SetButtonState(_waterButton, _waterText, false, false);
@@ -140,6 +162,47 @@ namespace OrcFarm.UI
                 _lastCareVisible = ctx.CareVisible;
                 _lastCareActive  = ctx.CareActive;
             }
+
+            HandleInactiveKeyPress(ctx);
+        }
+
+        // ── Reason text ────────────────────────────────────────────────────────
+
+        private void HandleInactiveKeyPress(FarmActionContext ctx)
+        {
+            if (_reasonText == null)
+                return;
+
+            Keyboard kb = Keyboard.current;
+            if (kb == null)
+                return;
+
+            if (ctx.FeedVisible && !ctx.FeedActive && kb.fKey.wasPressedThisFrame)
+            {
+                ShowReason("No feed item selected");
+                return;
+            }
+
+            if (ctx.CareVisible && !ctx.CareActive && kb.cKey.wasPressedThisFrame)
+                ShowReason("Empty hands needed");
+        }
+
+        private void ShowReason(string message)
+        {
+            _reasonText.text = message;
+
+            if (_reasonClearCoroutine != null)
+                StopCoroutine(_reasonClearCoroutine);
+
+            _reasonClearCoroutine = StartCoroutine(ClearReasonAfterDelay());
+        }
+
+        private IEnumerator ClearReasonAfterDelay()
+        {
+            yield return _reasonClearWait;
+            if (_reasonText != null)
+                _reasonText.text = string.Empty;
+            _reasonClearCoroutine = null;
         }
 
         // ── Helpers ────────────────────────────────────────────────────────────
