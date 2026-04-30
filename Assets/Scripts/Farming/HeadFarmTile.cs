@@ -83,8 +83,22 @@ namespace OrcFarm.Farming
         private float _waterScore;
         private float _careScore;
 
+        // Influence tracking — accumulated during Growing; read at harvest; reset on next Growing enter.
+        private float        _growthTotalTime;
+        private float        _timeLowFeed;
+        private float        _timeLowWater;
+        private float        _timeLowCare;
+        private HeadFarmPlot _plot;
+
         // Height above tile origin where the harvested head spawns before dropping.
         private const float HarvestSpawnHeight = 0.8f;
+
+        // Thresholds for influence flag evaluation.
+        private const float LowScoreThreshold  = 0.3f;  // score below this counts as "low" per frame
+        private const float LowRatioThreshold  = 0.35f; // fraction of grow time at low score → bad flag
+        private const float GoodRatioThreshold = 0.15f; // fraction of grow time at low score → good flag
+        private const int   IsolationMax       = 1;     // active tile count ≤ this → Isolation
+        private const int   CrowdedMin         = 6;     // active tile count ≥ this → Crowded
 
         // ── IInteractable ──────────────────────────────────────────────────────
 
@@ -174,12 +188,17 @@ namespace OrcFarm.Farming
             {
                 head.Initialize(_carryController);
                 head.SetQuality(quality);
+                TraitInfluenceFlags flags = EvaluateHeadInfluenceFlags();
+                head.SetTrait(flags, SelectHeadTrait(flags, quality));
             }
         }
 
         /// <inheritdoc/>
         public void TransitionTo(HeadTileState next)
         {
+            if (next == HeadTileState.Growing)
+                ResetInfluenceTracking();
+
             LogTransition(_tileState, next);
             _tileState = next;
             _stateMachine.ChangeState(CreateState(next));
@@ -224,6 +243,15 @@ namespace OrcFarm.Farming
             _waterScore = 1f;
             _careScore  = 1f;
             NotifyConditionChanged();
+        }
+
+        /// <inheritdoc/>
+        public void TrackGrowthFrame(float dt)
+        {
+            _growthTotalTime += dt;
+            if (_feedScore  < LowScoreThreshold) _timeLowFeed  += dt;
+            if (_waterScore < LowScoreThreshold) _timeLowWater += dt;
+            if (_careScore  < LowScoreThreshold) _timeLowCare  += dt;
         }
 
         /// <inheritdoc/>
@@ -401,6 +429,7 @@ namespace OrcFarm.Farming
             _growthVisualStartScale   = Mathf.Max(0f, _growthVisualStartScale);
             _growthVisualHarvestScale = Mathf.Max(_growthVisualStartScale, _growthVisualHarvestScale);
 
+            _plot = GetComponentInParent<HeadFarmPlot>();
             _data.Validate();
 
             SetFarmFocused(false);
@@ -452,6 +481,53 @@ namespace OrcFarm.Farming
 #endif
 
         // ── Helpers ────────────────────────────────────────────────────────────
+
+        private void ResetInfluenceTracking()
+        {
+            _growthTotalTime = 0f;
+            _timeLowFeed     = 0f;
+            _timeLowWater    = 0f;
+            _timeLowCare     = 0f;
+        }
+
+        private TraitInfluenceFlags EvaluateHeadInfluenceFlags()
+        {
+            TraitInfluenceFlags flags = TraitInfluenceFlags.None;
+
+            if (_growthTotalTime > 0f)
+            {
+                float feedRatio  = _timeLowFeed  / _growthTotalTime;
+                float waterRatio = _timeLowWater / _growthTotalTime;
+                float careRatio  = _timeLowCare  / _growthTotalTime;
+
+                if (feedRatio  > LowRatioThreshold)  flags |= TraitInfluenceFlags.LowFeed;
+                if (waterRatio > LowRatioThreshold)  flags |= TraitInfluenceFlags.NeglectedWater;
+                else if (waterRatio < GoodRatioThreshold) flags |= TraitInfluenceFlags.GoodWater;
+                if (careRatio  > LowRatioThreshold)  flags |= TraitInfluenceFlags.LowCare;
+                else if (careRatio < GoodRatioThreshold)  flags |= TraitInfluenceFlags.GoodCare;
+            }
+
+            if (_plot != null)
+            {
+                int activeTiles = _plot.GetActiveTileCount();
+                if (activeTiles <= IsolationMax)    flags |= TraitInfluenceFlags.Isolation;
+                else if (activeTiles >= CrowdedMin) flags |= TraitInfluenceFlags.Crowded;
+            }
+
+            return flags;
+        }
+
+        private static OrcTrait SelectHeadTrait(TraitInfluenceFlags flags, OrcQuality quality)
+        {
+            if ((flags & TraitInfluenceFlags.LowFeed)   != 0) return OrcTrait.BoneIdle;
+            if ((flags & TraitInfluenceFlags.LowCare)   != 0) return OrcTrait.Clumsy;
+            if ((flags & TraitInfluenceFlags.GoodCare)  != 0 &&
+                (flags & TraitInfluenceFlags.GoodWater) != 0) return OrcTrait.Resilient;
+            if ((flags & TraitInfluenceFlags.GoodWater) != 0) return OrcTrait.Diligent;
+            if ((flags & TraitInfluenceFlags.Crowded)   != 0) return OrcTrait.Brutish;
+            if ((flags & TraitInfluenceFlags.Isolation) != 0) return OrcTrait.Twitchy;
+            return TraitFallback.Select(quality);
+        }
 
         private bool HasEmptyHands()
         {

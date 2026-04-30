@@ -39,15 +39,23 @@ namespace OrcFarm.Farming
         [SerializeField] private HarvestedLegPool _legPool;
 
         [Header("Fish Visuals")]
-        [Tooltip("Optional visual fish prefab spawned when LegFry is stocked.")]
+        [Tooltip("Fish placeholder prefab. One instance per pool slot is pre-instantiated in Awake.")]
         [SerializeField] private GameObject _fishPrefab;
 
-        [Tooltip("Where fish visuals spawn. If empty, this pond transform is used.")]
+        [Tooltip("Center of the fish placement area. Falls back to this pond transform if unassigned.")]
         [SerializeField] private Transform _fishSpawnPoint;
 
-        [Tooltip("Random horizontal offset around the spawn point so multiple fish do not overlap.")]
+        [Tooltip("Radius around _fishSpawnPoint within which fish visuals are placed randomly.")]
         [Min(0f)]
         [SerializeField] private float _fishSpawnJitterRadius = 0.25f;
+
+        [Tooltip("Total visual slots pre-instantiated in Awake. Stocking more fish than this shows only this many visuals.")]
+        [Min(1)]
+        [SerializeField] private int _maxFishVisuals = 8;
+
+        [Tooltip("Minimum XZ separation between fish visuals. Placement tries up to 10 positions per fish.")]
+        [Min(0f)]
+        [SerializeField] private float _minFishSeparation = 0.3f;
 
         [Tooltip("Assign the FarmFocusDetector component from the player. " +
                  "Ensures E interaction only fires when the player is looking at this pond.")]
@@ -68,16 +76,31 @@ namespace OrcFarm.Farming
         private LegPondStateMachine _stateMachine;
         private LegPondState        _pondState = LegPondState.Empty;
 
-        private OrcQuality             _quality;
-        private float                  _growthTimer;
-        private float                  _stockedTimer;
-        private float                  _starvationTimer;
-        private bool                   _careGiven;
+        private OrcQuality              _quality;
+        private float                   _growthTimer;
+        private float                   _stockedTimer;
+        private float                   _starvationTimer;
+        private bool                    _careGiven;
+        private int                     _fishDeathCount;
         private CancellationTokenSource _readoutCts;
 
-        private readonly List<LegFishData> _fish = new List<LegFishData>(8);
-        private readonly List<GameObject> _fishVisuals = new List<GameObject>(8);
+        // Thresholds for influence flag evaluation.
+        private const float LowFeedThreshold       = 0.3f;  // fish FeedScore below this counts as low per frame
+        private const float LowCareThreshold       = 0.3f;  // fish CareScore below this counts as low per frame
+        private const float HalfFeedThreshold      = 0.5f;  // fish FeedScore ever below this → FeedEverBelowHalf
+        private const float LowFeedRatioThreshold  = 0.35f; // fraction of grow time at low feed → LowFeed flag
+        private const float LowCareRatioThreshold  = 0.35f; // fraction of grow time at low care → LowCare flag
+        private const float GoodFeedRatioThreshold = 0.15f; // fraction of grow time at low feed → HighFeed flag
+        private const float GoodCareRatioThreshold = 0.15f; // fraction of grow time at low care → GoodCare flag
+
+        private readonly List<LegFishData>    _fish             = new List<LegFishData>(8);
+        private readonly List<Transform>      _fishVisualPool   = new List<Transform>(8);
         private readonly List<LegGrowthVisual> _legGrowthVisuals = new List<LegGrowthVisual>(8);
+
+        // Index i = visual/growth-visual for fish i. Null means slot unassigned or returned to pool.
+        private Transform[]     _fishVisualByIndex;
+        private LegGrowthVisual[] _poolGrowthVisuals; // cached from each pool object in Awake, never changes
+        private bool            _fishVisualsReady;
 
 #if UNITY_EDITOR
         // ── Debug hooks (Play Mode only) ───────────────────────────────────────
@@ -193,11 +216,12 @@ namespace OrcFarm.Farming
         public void InitializeFish(LegFryTier tier, int count)
         {
             _fish.Clear();
+            _fishDeathCount = 0;
             for (int i = 0; i < count; i++)
                 _fish.Add(new LegFishData());
 
             _quality = _fryData.GetBaseQuality(tier);
-            SpawnFishVisual();
+            AssignFishVisuals(count);
         }
 
         /// <inheritdoc/>
@@ -229,9 +253,11 @@ namespace OrcFarm.Farming
                 finalQuality = OrcQuality.High;
 
             leg.SetQuality(finalQuality);
+            // Legacy path has no individual fish data — use quality-based fallback directly.
+            leg.SetTrait(TraitInfluenceFlags.None, TraitFallback.Select(finalQuality));
             leg.Initialize(_carry);
             _carry.PickUpLeg(leg);
-            DespawnFishVisual();
+            ReturnAllFishVisuals();
 
             ShowHarvestReadout(finalQuality);
         }
@@ -248,7 +274,11 @@ namespace OrcFarm.Farming
                 _careGiven       = false;
                 _quality         = OrcQuality.Low;
                 _fish.Clear();
-                ClearFishVisuals();
+                ReturnAllFishVisuals();
+            }
+            else if (next == LegPondState.Growing)
+            {
+                ActivateFishVisuals();
             }
             else if (next == LegPondState.NeedsCare)
             {
@@ -269,6 +299,9 @@ namespace OrcFarm.Farming
         /// <inheritdoc/>
         public bool DecayFishScores(float feedDecay, float careDecay)
         {
+            // Recover dt from the pre-multiplied feedDecay so we can accumulate time per fish.
+            float dt = _config.FeedDecayRate > 0f ? feedDecay / _config.FeedDecayRate : 0f;
+
             bool anyAlive = false;
             for (int i = 0; i < _fish.Count; i++)
             {
@@ -279,8 +312,16 @@ namespace OrcFarm.Farming
                 fish.FeedScore = Mathf.Max(0f, fish.FeedScore - feedDecay);
                 fish.CareScore = Mathf.Max(0f, fish.CareScore - careDecay);
 
+                if (fish.FeedScore < LowFeedThreshold)  fish.TimeLowFeed += dt;
+                if (fish.CareScore < LowCareThreshold)  fish.TimeLowCare += dt;
+                if (fish.FeedScore < HalfFeedThreshold) fish.FeedEverBelowHalf = true;
+
                 if (fish.FeedScore <= 0f)
+                {
                     fish.IsAlive = false;
+                    _fishDeathCount++;
+                    DeactivateFishVisualAt(i);
+                }
                 else
                     anyAlive = true;
             }
@@ -331,9 +372,11 @@ namespace OrcFarm.Farming
                     return;
                 }
 
+                TraitInfluenceFlags flags = EvaluateLegInfluenceFlags(fish);
                 fish.IsAlive = false;
-                DespawnFishVisual();
+                DeactivateFishVisualAt(i);
                 leg.SetQuality(quality);
+                leg.SetTrait(flags, SelectLegTrait(flags, quality));
                 leg.Initialize(_carry);
                 _carry.PickUpLeg(leg);
                 ShowHarvestReadout(quality);
@@ -489,6 +532,8 @@ namespace OrcFarm.Farming
             if (_resultText != null)
                 _resultText.text = string.Empty;
 
+            InitFishVisualPool();
+
 #if UNITY_EDITOR
             _debugForceNeedsCare      = false; // discard any stale tick left from Edit Mode
             _debugForceReadyToHarvest = false;
@@ -501,12 +546,13 @@ namespace OrcFarm.Farming
         {
             _readoutCts?.Cancel();
             _readoutCts?.Dispose();
-            ClearFishVisuals();
         }
 
         private void OnValidate()
         {
             _fishSpawnJitterRadius = Mathf.Max(0f, _fishSpawnJitterRadius);
+            _maxFishVisuals        = Mathf.Max(1, _maxFishVisuals);
+            _minFishSeparation     = Mathf.Max(0f, _minFishSeparation);
         }
 
         private void Update()
@@ -621,50 +667,140 @@ namespace OrcFarm.Farming
             return true;
         }
 
-        private void SpawnFishVisual()
+        private void InitFishVisualPool()
         {
-            ClearFishVisuals();
-
             if (_fishPrefab == null)
+            {
+                LogMissingFishPrefab();
+                return;
+            }
+
+            _fishVisualByIndex  = new Transform[_maxFishVisuals];
+            _poolGrowthVisuals  = new LegGrowthVisual[_maxFishVisuals];
+
+            for (int i = 0; i < _maxFishVisuals; i++)
+            {
+                Transform visual = Instantiate(_fishPrefab, transform).transform;
+
+                // Disable physics on static display visuals so they never interfere with gameplay.
+                if (visual.TryGetComponent(out Collider col)) col.enabled    = false;
+                if (visual.TryGetComponent(out Rigidbody  rb)) rb.isKinematic = true;
+
+                _poolGrowthVisuals[i] = visual.GetComponentInChildren<LegGrowthVisual>();
+                visual.gameObject.SetActive(false);
+                _fishVisualPool.Add(visual);
+            }
+
+            _fishVisualsReady = true;
+        }
+
+        private void AssignFishVisuals(int fishCount)
+        {
+            ReturnAllFishVisuals();
+
+            if (!_fishVisualsReady)
                 return;
 
-            Transform spawnPoint = _fishSpawnPoint != null ? _fishSpawnPoint : transform;
-            Vector2 jitter = Random.insideUnitCircle * _fishSpawnJitterRadius;
-            Vector3 position = spawnPoint.position + new Vector3(jitter.x, 0f, jitter.y);
-            GameObject visual = Instantiate(_fishPrefab, position, spawnPoint.rotation, transform);
-
-            _fishVisuals.Add(visual);
-            LegGrowthVisual growthVisual = visual.GetComponentInChildren<LegGrowthVisual>();
-            if (growthVisual != null)
+            int count = Mathf.Min(fishCount, _maxFishVisuals);
+            for (int i = 0; i < count; i++)
             {
-                growthVisual.SetProgress(0f);
-                _legGrowthVisuals.Add(growthVisual);
+                Transform visual = _fishVisualPool[i];
+                _fishVisualByIndex[i] = visual;
+                PlaceFishVisual(visual, i);
+
+                LegGrowthVisual growthVisual = _poolGrowthVisuals[i];
+                if (growthVisual != null)
+                {
+                    growthVisual.SetProgress(0f);
+                    _legGrowthVisuals.Add(growthVisual);
+                }
+                // Kept inactive — activated when the pond enters Growing.
             }
         }
 
-        private void DespawnFishVisual()
+        private void PlaceFishVisual(Transform visual, int fishIndex)
         {
-            if (_fishVisuals.Count == 0)
-                return;
+            Transform spawnCenter = _fishSpawnPoint != null ? _fishSpawnPoint : transform;
+            Vector3   center      = spawnCenter.position;
+            float     radius      = _fishSpawnJitterRadius;
+            float     sepSqr      = _minFishSeparation * _minFishSeparation;
 
-            GameObject visual = _fishVisuals[0];
-            _fishVisuals.RemoveAt(0);
-            if (_legGrowthVisuals.Count > 0)
-                _legGrowthVisuals.RemoveAt(0);
+            Vector3 bestPos  = center;
+            float   bestDist = -1f;
 
-            if (visual != null)
-                Destroy(visual);
-        }
-
-        private void ClearFishVisuals()
-        {
-            for (int i = 0; i < _fishVisuals.Count; i++)
+            const int MaxAttempts = 10;
+            for (int attempt = 0; attempt < MaxAttempts; attempt++)
             {
-                if (_fishVisuals[i] != null)
-                    Destroy(_fishVisuals[i]);
+                Vector2 jitter    = Random.insideUnitCircle * radius;
+                Vector3 candidate = new Vector3(center.x + jitter.x, center.y, center.z + jitter.y);
+
+                float minSqr = float.MaxValue;
+                for (int j = 0; j < fishIndex; j++)
+                {
+                    if (_fishVisualByIndex[j] == null)
+                        continue;
+
+                    Vector3 delta = candidate - _fishVisualByIndex[j].position;
+                    float   dsqr  = delta.x * delta.x + delta.z * delta.z;
+                    if (dsqr < minSqr)
+                        minSqr = dsqr;
+                }
+
+                if (minSqr >= sepSqr)
+                {
+                    visual.position = candidate;
+                    return;
+                }
+
+                if (minSqr > bestDist)
+                {
+                    bestDist = minSqr;
+                    bestPos  = candidate;
+                }
             }
 
-            _fishVisuals.Clear();
+            // No separation-valid position found — use the best available attempt.
+            visual.position = bestPos;
+        }
+
+        private void ActivateFishVisuals()
+        {
+            if (!_fishVisualsReady)
+                return;
+
+            for (int i = 0; i < _fish.Count && i < _maxFishVisuals; i++)
+            {
+                if (_fishVisualByIndex[i] != null)
+                    _fishVisualByIndex[i].gameObject.SetActive(true);
+            }
+        }
+
+        private void DeactivateFishVisualAt(int fishIndex)
+        {
+            if (!_fishVisualsReady || fishIndex >= _maxFishVisuals)
+                return;
+
+            if (_fishVisualByIndex[fishIndex] != null)
+            {
+                _fishVisualByIndex[fishIndex].gameObject.SetActive(false);
+                _fishVisualByIndex[fishIndex] = null;
+            }
+        }
+
+        private void ReturnAllFishVisuals()
+        {
+            if (!_fishVisualsReady)
+                return;
+
+            for (int i = 0; i < _maxFishVisuals; i++)
+            {
+                if (_fishVisualByIndex[i] != null)
+                {
+                    _fishVisualByIndex[i].gameObject.SetActive(false);
+                    _fishVisualByIndex[i] = null;
+                }
+            }
+
             _legGrowthVisuals.Clear();
         }
 
@@ -688,6 +824,47 @@ namespace OrcFarm.Farming
                 if (_legGrowthVisuals[i] != null)
                     _legGrowthVisuals[i].SetProgress(progress);
             }
+        }
+
+        private TraitInfluenceFlags EvaluateLegInfluenceFlags(LegFishData fish)
+        {
+            TraitInfluenceFlags flags = TraitInfluenceFlags.None;
+
+            float totalTime = _growthTimer;
+            if (totalTime > 0f)
+            {
+                float feedRatio = fish.TimeLowFeed / totalTime;
+                float careRatio = fish.TimeLowCare / totalTime;
+
+                if (feedRatio > LowFeedRatioThreshold)
+                    flags |= TraitInfluenceFlags.LowFeed;
+                else if (feedRatio < GoodFeedRatioThreshold && !fish.FeedEverBelowHalf)
+                    flags |= TraitInfluenceFlags.HighFeed;
+
+                if (careRatio > LowCareRatioThreshold)
+                    flags |= TraitInfluenceFlags.LowCare;
+                else if (careRatio < GoodCareRatioThreshold)
+                    flags |= TraitInfluenceFlags.GoodCare;
+            }
+
+            if (_fish.Count >= _config.PondCapacity) flags |= TraitInfluenceFlags.Overstocked;
+            else if (_fish.Count == 1)               flags |= TraitInfluenceFlags.Understocked;
+
+            if (_fishDeathCount > 0) flags |= TraitInfluenceFlags.FishDeaths;
+
+            return flags;
+        }
+
+        private static OrcTrait SelectLegTrait(TraitInfluenceFlags flags, OrcQuality quality)
+        {
+            if ((flags & TraitInfluenceFlags.FishDeaths)   != 0) return OrcTrait.Twitchy;
+            if ((flags & TraitInfluenceFlags.LowFeed)      != 0) return OrcTrait.BoneIdle;
+            if ((flags & TraitInfluenceFlags.Overstocked)  != 0) return OrcTrait.Brutish;
+            if ((flags & TraitInfluenceFlags.Understocked) != 0) return OrcTrait.Resilient;
+            if ((flags & TraitInfluenceFlags.GoodCare)  != 0 &&
+                (flags & TraitInfluenceFlags.HighFeed)  != 0) return OrcTrait.Diligent;
+            if ((flags & TraitInfluenceFlags.LowCare)      != 0) return OrcTrait.Clumsy;
+            return TraitFallback.Select(quality);
         }
 
         private ILegPondState CreateState(LegPondState state) => state switch
@@ -738,6 +915,14 @@ namespace OrcFarm.Farming
             Debug.LogError(
                 $"[LegPond '{gameObject.name}'] Pool object '{goName}' has no HarvestedLeg component. " +
                 "Check the HarvestedLegPool prefab.", this);
+        }
+
+        [System.Diagnostics.Conditional("UNITY_EDITOR")]
+        private void LogMissingFishPrefab()
+        {
+            Debug.LogWarning(
+                $"[LegPond '{gameObject.name}'] _fishPrefab is not assigned — " +
+                "fish visuals will not appear. Assign a prefab in the Inspector.", this);
         }
     }
 }

@@ -78,6 +78,12 @@ namespace OrcFarm.Farming
         /// <summary>Resets all three condition scores to 1.0. Call in Growing OnEnter.</summary>
         void ResetConditionScores();
 
+        /// <summary>
+        /// Accumulates per-frame influence data for trait evaluation at harvest.
+        /// Called by <see cref="HeadTileGrowingState"/> each frame after score decay.
+        /// </summary>
+        void TrackGrowthFrame(float dt);
+
         /// <summary>True while the player is carrying any item. Used to gate Feed/Water actions.</summary>
         bool IsPlayerCarrying { get; }
     }

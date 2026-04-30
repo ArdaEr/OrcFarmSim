@@ -59,6 +59,8 @@ namespace OrcFarm.Farming
             _ctx.SetWaterScore(_ctx.WaterScore - _ctx.Data.WaterDecayRate * dt);
             _ctx.SetCareScore (_ctx.CareScore  - _ctx.Data.CareDecayRate  * dt);
 
+            _ctx.TrackGrowthFrame(dt);
+
             // Starvation check runs before grow-complete so a crop that hits 0 feed
             // on the same frame it would finish does not produce a harvest.
             if (_ctx.FeedScore <= 0f)

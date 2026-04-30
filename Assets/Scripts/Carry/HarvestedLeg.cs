@@ -32,6 +32,21 @@ namespace OrcFarm.Carry
         /// <summary>Quality tier set by the pond at harvest time.</summary>
         public OrcQuality Quality { get; private set; }
 
+        // ── Trait candidate ────────────────────────────────────────────────────
+
+        /// <summary>Influence flags accumulated during this leg's growth cycle.</summary>
+        public TraitInfluenceFlags InfluenceFlags { get; private set; }
+
+        /// <summary>Trait candidate evaluated at harvest time.</summary>
+        public OrcTrait TraitCandidate { get; private set; }
+
+        /// <summary>Stores the influence flags and trait candidate evaluated at harvest.</summary>
+        public void SetTrait(TraitInfluenceFlags flags, OrcTrait trait)
+        {
+            InfluenceFlags = flags;
+            TraitCandidate = trait;
+        }
+
         // ── IInteractable ──────────────────────────────────────────────────────
 
         /// <inheritdoc/>
@@ -61,9 +76,11 @@ namespace OrcFarm.Carry
         /// <inheritdoc/>
         public void ResetState()
         {
-            _isCarried = false;
-            _carry     = null;
-            Quality    = OrcQuality.Low;
+            _isCarried     = false;
+            _carry         = null;
+            Quality        = OrcQuality.Low;
+            InfluenceFlags = TraitInfluenceFlags.None;
+            TraitCandidate = OrcTrait.None;
 
             transform.SetParent(null);
 

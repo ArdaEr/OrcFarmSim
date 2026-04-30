@@ -38,6 +38,21 @@ namespace OrcFarm.Carry
         /// <summary>Sets the quality. Called by <see cref="HeadFarmTile"/> immediately after pool retrieval.</summary>
         public void SetQuality(OrcQuality quality) => Quality = quality;
 
+        // ── Trait candidate ────────────────────────────────────────────────────
+
+        /// <summary>Influence flags accumulated during this head's growth cycle.</summary>
+        public TraitInfluenceFlags InfluenceFlags { get; private set; }
+
+        /// <summary>Trait candidate evaluated at harvest time.</summary>
+        public OrcTrait TraitCandidate { get; private set; }
+
+        /// <summary>Stores the influence flags and trait candidate evaluated at harvest.</summary>
+        public void SetTrait(TraitInfluenceFlags flags, OrcTrait trait)
+        {
+            InfluenceFlags = flags;
+            TraitCandidate = trait;
+        }
+
         // ── IInteractable ──────────────────────────────────────────────────────
 
         /// <inheritdoc/>
@@ -72,9 +87,11 @@ namespace OrcFarm.Carry
         /// </remarks>
         public void ResetState()
         {
-            _isCarried = false;
-            _carry     = null;
-            Quality    = OrcQuality.Low;
+            _isCarried     = false;
+            _carry         = null;
+            Quality        = OrcQuality.Low;
+            InfluenceFlags = TraitInfluenceFlags.None;
+            TraitCandidate = OrcTrait.None;
 
             transform.SetParent(null);
 

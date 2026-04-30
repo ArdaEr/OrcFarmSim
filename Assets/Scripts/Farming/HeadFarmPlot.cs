@@ -267,6 +267,23 @@ namespace OrcFarm.Farming
             }
         }
 
+        /// <summary>
+        /// Returns the number of tiles currently in an active crop state
+        /// (Seeded, Covered, Growing, or ReadyToHarvest).
+        /// Called by <see cref="HeadFarmTile"/> during influence evaluation at harvest.
+        /// </summary>
+        public int GetActiveTileCount()
+        {
+            int count = 0;
+            for (int i = 0; i < _tiles.Count; i++)
+            {
+                HeadTileState s = _tiles[i].State;
+                if (s != HeadTileState.Empty && s != HeadTileState.Dead && s != HeadTileState.Tilled)
+                    count++;
+            }
+            return count;
+        }
+
         private Vector3 GetTileLocalPosition(int row, int column) =>
             new Vector3(column * _tileSpacing.x, 0f, -row * _tileSpacing.y);
     }
