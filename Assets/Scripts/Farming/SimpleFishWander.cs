@@ -60,6 +60,17 @@ namespace OrcFarm.Farming
             PickNewTarget();
         }
 
+        /// <summary>
+        /// Rebuilds the wander origin and locked height from the current transform position.
+        /// </summary>
+        public void ResetOrigin()
+        {
+            _home = _pondCentre != null ? _pondCentre.position : transform.position;
+            _height = transform.position.y;
+
+            PickNewTarget();
+        }
+
         private void Update()
         {
             float deltaTime = Time.deltaTime;

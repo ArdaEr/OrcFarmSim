@@ -42,20 +42,16 @@ namespace OrcFarm.Farming
         [Tooltip("Fish placeholder prefab. One instance per pool slot is pre-instantiated in Awake.")]
         [SerializeField] private GameObject _fishPrefab;
 
-        [Tooltip("Center of the fish placement area. Falls back to this pond transform if unassigned.")]
+        [Tooltip("Where fish visuals appear. Falls back to this pond transform if unassigned.")]
         [SerializeField] private Transform _fishSpawnPoint;
 
-        [Tooltip("Radius around _fishSpawnPoint within which fish visuals are placed randomly.")]
+        [Tooltip("Random horizontal offset radius around the fish spawn point.")]
         [Min(0f)]
-        [SerializeField] private float _fishSpawnJitterRadius = 0.25f;
+        [SerializeField] private float _fishSpawnOffsetRadius = 0.25f;
 
         [Tooltip("Total visual slots pre-instantiated in Awake. Stocking more fish than this shows only this many visuals.")]
         [Min(1)]
         [SerializeField] private int _maxFishVisuals = 8;
-
-        [Tooltip("Minimum XZ separation between fish visuals. Placement tries up to 10 positions per fish.")]
-        [Min(0f)]
-        [SerializeField] private float _minFishSeparation = 0.3f;
 
         [Tooltip("Assign the FarmFocusDetector component from the player. " +
                  "Ensures E interaction only fires when the player is looking at this pond.")]
@@ -100,6 +96,7 @@ namespace OrcFarm.Farming
         // Index i = visual/growth-visual for fish i. Null means slot unassigned or returned to pool.
         private Transform[]     _fishVisualByIndex;
         private LegGrowthVisual[] _poolGrowthVisuals; // cached from each pool object in Awake, never changes
+        private SimpleFishWander[] _poolFishWanders;
         private bool            _fishVisualsReady;
 
 #if UNITY_EDITOR
@@ -550,9 +547,8 @@ namespace OrcFarm.Farming
 
         private void OnValidate()
         {
-            _fishSpawnJitterRadius = Mathf.Max(0f, _fishSpawnJitterRadius);
+            _fishSpawnOffsetRadius = Mathf.Max(0f, _fishSpawnOffsetRadius);
             _maxFishVisuals        = Mathf.Max(1, _maxFishVisuals);
-            _minFishSeparation     = Mathf.Max(0f, _minFishSeparation);
         }
 
         private void Update()
@@ -677,6 +673,7 @@ namespace OrcFarm.Farming
 
             _fishVisualByIndex  = new Transform[_maxFishVisuals];
             _poolGrowthVisuals  = new LegGrowthVisual[_maxFishVisuals];
+            _poolFishWanders    = new SimpleFishWander[_maxFishVisuals];
 
             for (int i = 0; i < _maxFishVisuals; i++)
             {
@@ -687,6 +684,7 @@ namespace OrcFarm.Farming
                 if (visual.TryGetComponent(out Rigidbody  rb)) rb.isKinematic = true;
 
                 _poolGrowthVisuals[i] = visual.GetComponentInChildren<LegGrowthVisual>();
+                _poolFishWanders[i] = visual.GetComponent<SimpleFishWander>();
                 visual.gameObject.SetActive(false);
                 _fishVisualPool.Add(visual);
             }
@@ -702,11 +700,19 @@ namespace OrcFarm.Farming
                 return;
 
             int count = Mathf.Min(fishCount, _maxFishVisuals);
+            Transform spawnPoint = _fishSpawnPoint != null ? _fishSpawnPoint : transform;
             for (int i = 0; i < count; i++)
             {
                 Transform visual = _fishVisualPool[i];
                 _fishVisualByIndex[i] = visual;
-                PlaceFishVisual(visual, i);
+                Vector2 offset = Random.insideUnitCircle * _fishSpawnOffsetRadius;
+                Vector3 position = spawnPoint.position + new Vector3(offset.x, 0f, offset.y);
+                visual.SetPositionAndRotation(position, spawnPoint.rotation);
+                SimpleFishWander wander = _poolFishWanders[i];
+                if (wander != null)
+                {
+                    wander.ResetOrigin();
+                }
 
                 LegGrowthVisual growthVisual = _poolGrowthVisuals[i];
                 if (growthVisual != null)
@@ -716,51 +722,6 @@ namespace OrcFarm.Farming
                 }
                 // Kept inactive — activated when the pond enters Growing.
             }
-        }
-
-        private void PlaceFishVisual(Transform visual, int fishIndex)
-        {
-            Transform spawnCenter = _fishSpawnPoint != null ? _fishSpawnPoint : transform;
-            Vector3   center      = spawnCenter.position;
-            float     radius      = _fishSpawnJitterRadius;
-            float     sepSqr      = _minFishSeparation * _minFishSeparation;
-
-            Vector3 bestPos  = center;
-            float   bestDist = -1f;
-
-            const int MaxAttempts = 10;
-            for (int attempt = 0; attempt < MaxAttempts; attempt++)
-            {
-                Vector2 jitter    = Random.insideUnitCircle * radius;
-                Vector3 candidate = new Vector3(center.x + jitter.x, center.y, center.z + jitter.y);
-
-                float minSqr = float.MaxValue;
-                for (int j = 0; j < fishIndex; j++)
-                {
-                    if (_fishVisualByIndex[j] == null)
-                        continue;
-
-                    Vector3 delta = candidate - _fishVisualByIndex[j].position;
-                    float   dsqr  = delta.x * delta.x + delta.z * delta.z;
-                    if (dsqr < minSqr)
-                        minSqr = dsqr;
-                }
-
-                if (minSqr >= sepSqr)
-                {
-                    visual.position = candidate;
-                    return;
-                }
-
-                if (minSqr > bestDist)
-                {
-                    bestDist = minSqr;
-                    bestPos  = candidate;
-                }
-            }
-
-            // No separation-valid position found — use the best available attempt.
-            visual.position = bestPos;
         }
 
         private void ActivateFishVisuals()
