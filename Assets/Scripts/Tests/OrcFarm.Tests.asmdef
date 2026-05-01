@@ -10,9 +10,12 @@
         "OrcFarm.Farming",
         "OrcFarm.Inventory",
         "OrcFarm.Carry",
-        "OrcFarm.Storage"
+        "OrcFarm.Storage",
+        "OrcFarm.Quests"
     ],
-    "includePlatforms": [],
+    "includePlatforms": [
+        "Editor"
+    ],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": true,
