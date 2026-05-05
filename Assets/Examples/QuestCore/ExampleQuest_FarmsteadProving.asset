@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2fb79441cb90413aaf77de7254fb8c77, type: 3}
+  m_Name: ExampleQuest_FarmsteadProving
+  m_EditorClassIdentifier: OrcFarm.Quests::OrcFarm.Quests.QuestDefinition
+  _questId: contract.farmstead_proving
+  _displayName: Farmstead Proving
+  _description: Complete a basic contract by selling an orc, delivering seeds, and earning bronze.
+  _category: 0
+  _completionMode: 1
+  _canRepeat: 0
+  _objectives:
+  - {fileID: 11400000, guid: 7c5b40076b4c4cb0b51bf130561f504b, type: 2}
+  - {fileID: 11400000, guid: 109825df58594f309c58dabfb1f34925, type: 2}
+  - {fileID: 11400000, guid: ce6ca6c95f734cec91420fa4c42fba0f, type: 2}
