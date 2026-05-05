@@ -1,7 +1,10 @@
 {
     "name": "OrcFarm.Quests",
     "rootNamespace": "OrcFarm.Quests",
-    "references": [],
+    "references": [
+        "MessagePipe",
+        "UniTask"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

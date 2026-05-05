@@ -6,6 +6,7 @@ using OrcFarm.Farming;
 using OrcFarm.Interaction;
 using OrcFarm.Inventory;
 using OrcFarm.Player;
+using OrcFarm.Quests;
 using OrcFarm.Storage;
 using UnityEngine;
 using VContainer;
@@ -43,6 +44,17 @@ namespace OrcFarm.App
                  "Auto-resolved from the scene if left unassigned.")]
         [SerializeField] private HotbarItemPresenter _hotbarItemPresenter;
 
+        [Header("Quest definitions")]
+        [Tooltip("Quest definitions registered at scene start.")]
+        [SerializeField] private QuestDefinition[] _questDefinitions;
+
+        [Tooltip("Prototype helper. Starts every assigned quest definition when the scene scope builds.")]
+        [SerializeField] private bool _startAssignedQuestDefinitions = true;
+
+        [Header("Quest action publishers")]
+        [Tooltip("Scene components that implement IQuestObjectiveActionPublisherTarget.")]
+        [SerializeField] private MonoBehaviour[] _questActionPublisherTargets;
+
         protected override void Configure(IContainerBuilder builder)
         {
             ResolveSceneReferences();
@@ -68,9 +80,44 @@ namespace OrcFarm.App
                     _hotbarItemPresenter.SetInventoryFullCallback(
                         () => _interactHud.ShowInventoryFullWarning());
                 }
+
+                IPublisher<QuestObjectiveActionSignal> questActionPublisher =
+                    c.Resolve<IPublisher<QuestObjectiveActionSignal>>();
+
+                if (_questActionPublisherTargets != null)
+                {
+                    for (int i = 0; i < _questActionPublisherTargets.Length; i++)
+                    {
+                        if (_questActionPublisherTargets[i] is IQuestObjectiveActionPublisherTarget target)
+                        {
+                            target.SetQuestActionPublisher(questActionPublisher);
+                        }
+                    }
+                }
+
+                c.Resolve<QuestProgressProxy>().Start();
             });
 
             builder.RegisterMessageBroker<CropHarvestedSignal>(pipeOptions);
+            builder.RegisterMessageBroker<QuestProgressSignal>(pipeOptions);
+            builder.RegisterMessageBroker<QuestObjectiveActionSignal>(pipeOptions);
+
+            QuestService questService =
+                new QuestService(_questDefinitions ?? Array.Empty<QuestDefinition>());
+
+            if (_startAssignedQuestDefinitions && _questDefinitions != null)
+            {
+                for (int i = 0; i < _questDefinitions.Length; i++)
+                {
+                    if (_questDefinitions[i] != null)
+                    {
+                        questService.TryStartQuest(_questDefinitions[i].QuestId);
+                    }
+                }
+            }
+
+            builder.RegisterInstance<IQuestService>(questService);
+            builder.Register<QuestProgressProxy>(Lifetime.Singleton).AsSelf();
 
             builder.RegisterComponent<IPlayerInputProvider>(_inputSource);
             builder.RegisterComponent<IInteractionService>(_interactionDetector);
@@ -115,6 +162,7 @@ namespace OrcFarm.App
                         builder.RegisterComponent(_legStorageContainers[i]);
                 }
             }
+
         }
 
         private void ResolveSceneReferences()
@@ -140,8 +188,40 @@ namespace OrcFarm.App
             if (_legStorageContainers == null || _legStorageContainers.Length == 0)
                 _legStorageContainers = FindObjectsByType<LegStorageContainer>(FindObjectsInactive.Include, FindObjectsSortMode.None);
 
+            if (_questActionPublisherTargets == null || _questActionPublisherTargets.Length == 0)
+            {
+                ResolveQuestActionPublisherTargets();
+            }
+
             _headPool ??= FindFirstObjectByType<HarvestedHeadPool>(FindObjectsInactive.Include);
             _hotbarItemPresenter ??= FindFirstObjectByType<HotbarItemPresenter>(FindObjectsInactive.Include);
+        }
+
+        private void ResolveQuestActionPublisherTargets()
+        {
+            MonoBehaviour[] behaviours =
+                FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+
+            int targetCount = 0;
+            for (int i = 0; i < behaviours.Length; i++)
+            {
+                if (behaviours[i] is IQuestObjectiveActionPublisherTarget)
+                {
+                    targetCount++;
+                }
+            }
+
+            _questActionPublisherTargets = new MonoBehaviour[targetCount];
+
+            int targetIndex = 0;
+            for (int i = 0; i < behaviours.Length; i++)
+            {
+                if (behaviours[i] is IQuestObjectiveActionPublisherTarget)
+                {
+                    _questActionPublisherTargets[targetIndex] = behaviours[i];
+                    targetIndex++;
+                }
+            }
         }
 
         private void ValidateSceneReferences()

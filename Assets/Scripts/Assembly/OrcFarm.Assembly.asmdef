@@ -7,6 +7,9 @@
         "OrcFarm.Carry",
         "OrcFarm.Workers",
         "OrcFarm.Storage",
+        "OrcFarm.Quests",
+        "MessagePipe",
+        "UniTask",
         "Unity.TextMeshPro"
     ],
     "includePlatforms": [],

@@ -1,6 +1,8 @@
 using System.Collections;
+using MessagePipe;
 using OrcFarm.Carry;
 using OrcFarm.Interaction;
+using OrcFarm.Quests;
 using OrcFarm.Workers;
 using TMPro;
 using UnityEngine;
@@ -28,7 +30,7 @@ namespace OrcFarm.Assembly
     /// interaction detection) and holds scene-side serialized references.
     /// </summary>
     [RequireComponent(typeof(Collider))]
-    public sealed class AssemblyStation : MonoBehaviour, IInteractable
+    public sealed class AssemblyStation : MonoBehaviour, IInteractable, IQuestObjectiveActionPublisherTarget
     {
         // ── References ─────────────────────────────────────────────────────────
 
@@ -93,6 +95,8 @@ namespace OrcFarm.Assembly
         // Tracks the active clear coroutine so it can be cancelled on rapid re-assembly.
         private Coroutine _clearCoroutine;
 
+        private IPublisher<QuestObjectiveActionSignal> _questActionPublisher;
+
         // ── Slot state ─────────────────────────────────────────────────────────
 
         private HarvestedHead _depositedHead;
@@ -103,6 +107,19 @@ namespace OrcFarm.Assembly
 
         /// <summary>True when a HarvestedLeg has been deposited and is waiting in the slot.</summary>
         public bool LegFilled  => _depositedLeg  != null;
+
+        /// <summary>
+        /// Sets the publisher used to dispatch quest objective actions.
+        /// </summary>
+        public void SetQuestActionPublisher(IPublisher<QuestObjectiveActionSignal> questActionPublisher)
+        {
+            if (questActionPublisher == null)
+            {
+                throw new System.ArgumentNullException(nameof(questActionPublisher));
+            }
+
+            _questActionPublisher = questActionPublisher;
+        }
 
         // ── IInteractable ──────────────────────────────────────────────────────
 
@@ -263,6 +280,7 @@ namespace OrcFarm.Assembly
 
             ShowOrcResult(quality);
             ShowResultText(quality);
+            PublishOrcCraftedAction();
             LogAssembly(quality);
         }
 
@@ -287,6 +305,20 @@ namespace OrcFarm.Assembly
                 keep.Initialize(_orcPen);
 
             orc.gameObject.SetActive(true);
+        }
+
+        private void PublishOrcCraftedAction()
+        {
+            if (_questActionPublisher == null)
+            {
+                throw new System.InvalidOperationException(
+                    $"[AssemblyStation '{gameObject.name}'] Quest action publisher was not injected.");
+            }
+
+            _questActionPublisher.Publish(
+                new QuestObjectiveActionSignal(
+                    QuestObjectiveActionKeys.OrcCraftedWithHeadAndLeg,
+                    1));
         }
 
         private void ShowHintText(string hint)

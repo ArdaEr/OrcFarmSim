@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: OrcFarm.Quests::OrcFarm.Quests.QuestDefinition
   _questId: contract.farmstead_proving
   _displayName: Farmstead Proving
-  _description: Complete a basic contract by selling an orc, delivering seeds, and earning bronze.
+  _description: Complete a basic contract by crafting an orc, delivering seeds, and earning bronze.
   _category: 0
   _completionMode: 1
   _canRepeat: 0

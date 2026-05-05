@@ -11,6 +11,7 @@
         "OrcFarm.Storage",
         "OrcFarm.Workers",
         "OrcFarm.Assembly",
+        "OrcFarm.Quests",
         "Unity.TextMeshPro",
         "Unity.InputSystem",
         "VContainer"

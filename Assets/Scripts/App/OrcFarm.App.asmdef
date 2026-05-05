@@ -10,6 +10,7 @@
         "OrcFarm.Carry",
         "OrcFarm.Storage",
         "OrcFarm.UI",
+        "OrcFarm.Quests",
         "VContainer",
         "VContainer.Unity",
         "MessagePipe",
