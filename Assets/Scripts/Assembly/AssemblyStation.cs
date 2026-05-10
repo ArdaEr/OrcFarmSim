@@ -7,6 +7,8 @@ using OrcFarm.Workers;
 using TMPro;
 using UnityEngine;
 using CoreQuality = OrcFarm.Core.OrcQuality;
+using CoreTrait   = OrcFarm.Core.OrcTrait;
+using static OrcFarm.Core.OrcTraitUtility;
 
 namespace OrcFarm.Assembly
 {
@@ -22,9 +24,8 @@ namespace OrcFarm.Assembly
     /// Assembly: when both slots are filled the next interaction consumes both parts,
     /// spawns an <see cref="AssembledOrc"/> from the prefab, and shows the result readout.
     ///
-    /// Quality of the assembled orc equals the deposited leg's quality tier. Head quality
-    /// is not exposed by the current OrcFarm.Carry API; a follow-up task extending
-    /// ICarryController will enable min(head, leg) quality once that data is available.
+    /// Quality of the assembled orc equals the deposited leg's quality tier.
+    /// Both head and leg quality are read during assembly for trait weighting.
     ///
     /// MonoBehaviour justification: owns Unity lifecycle (Awake validation, Collider for
     /// interaction detection) and holds scene-side serialized references.
@@ -80,9 +81,6 @@ namespace OrcFarm.Assembly
         // ── Result labels ──────────────────────────────────────────────────────
 
         [Header("Result labels")]
-        [Tooltip("Tendency label shown in the assembly result readout.")]
-        [SerializeField] private string _tendencyLabel = "Unknown";
-
         [Tooltip("Seconds the result readout stays visible before auto-clearing.")]
         [Min(0.1f)]
         [SerializeField] private float _readoutClearDelay = 4f;
@@ -264,8 +262,14 @@ namespace OrcFarm.Assembly
 
         private void Assemble()
         {
-            CoreQuality legQuality = _depositedLeg.Quality;
-            OrcQuality  quality    = (OrcQuality)(int)legQuality;
+            CoreQuality headQuality = _depositedHead.Quality;
+            CoreQuality legQuality  = _depositedLeg.Quality;
+            CoreTrait   headTrait   = _depositedHead.TraitCandidate;
+            CoreTrait   legTrait    = _depositedLeg.TraitCandidate;
+            OrcQuality  quality     = (OrcQuality)(int)legQuality;
+            CoreTrait   finalTrait  = SelectFinalTrait(headTrait, headQuality, legTrait, legQuality);
+
+            LogTraitSelection(headTrait, headQuality, legTrait, legQuality, finalTrait);
 
             // Consume deposited head: deactivate in place.
             // Note: does not return to HarvestedHeadPool — acceptable for prototype demo length.
@@ -278,15 +282,15 @@ namespace OrcFarm.Assembly
             _depositedLeg.gameObject.SetActive(false);
             _depositedLeg = null;
 
-            ShowOrcResult(quality);
-            ShowResultText(quality);
+            ShowOrcResult(quality, finalTrait);
+            ShowResultText(quality, finalTrait);
             PublishOrcCraftedAction();
-            LogAssembly(quality);
+            LogAssembly(quality, finalTrait);
         }
 
         // ── Private helpers ────────────────────────────────────────────────────
 
-        private void ShowOrcResult(OrcQuality quality)
+        private void ShowOrcResult(OrcQuality quality, CoreTrait trait)
         {
             if (_orcPrefab == null)
                 return;
@@ -297,6 +301,7 @@ namespace OrcFarm.Assembly
 
             AssembledOrc orc = Instantiate(_orcPrefab, spawnPos, _orcPrefab.transform.rotation);
             orc.SetQuality(quality);
+            orc.SetTrait(trait);
 
             if (orc.TryGetComponent(out HaulerWorker hauler))
                 hauler.Initialize(_orcWaitPoint, _orcStorageWalkTarget, _orcStorageDeliveryRoot);
@@ -334,7 +339,7 @@ namespace OrcFarm.Assembly
             _clearCoroutine = StartCoroutine(ClearResultAfterDelay());
         }
 
-        private void ShowResultText(OrcQuality quality)
+        private void ShowResultText(OrcQuality quality, CoreTrait trait)
         {
             if (_resultText == null)
                 return;
@@ -343,8 +348,8 @@ namespace OrcFarm.Assembly
             // not a per-frame hot path (§3.3 applies to Update/FixedUpdate only).
             _resultText.text =
                 "Orc assembled\n" +
-                "Quality:    " + quality       + "\n" +
-                "Tendency:   " + _tendencyLabel;
+                "Quality:  " + quality              + "\n" +
+                "Trait:    " + GetDisplayName(trait);
 
             if (_clearCoroutine != null)
                 StopCoroutine(_clearCoroutine);
@@ -369,13 +374,65 @@ namespace OrcFarm.Assembly
                 $"Leg slot: {(_depositedLeg  != null ? "filled" : "empty")}.", this);
         }
 
+        // ── Trait selection ────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Selects one final trait from the two part candidates using quality weighting
+        /// (Low = 1, Normal = 2, High = 3). Falls back when one or both candidates are None.
+        /// </summary>
+        private static CoreTrait SelectFinalTrait(
+            CoreTrait   headCandidate, CoreQuality headQuality,
+            CoreTrait   legCandidate,  CoreQuality legQuality)
+        {
+            bool headValid = headCandidate != CoreTrait.None;
+            bool legValid  = legCandidate  != CoreTrait.None;
+
+            if (!headValid && !legValid)
+                return GetFallbackTrait();
+
+            if (!headValid)
+                return legCandidate;
+
+            if (!legValid)
+                return headCandidate;
+
+            int headWeight = GetQualityWeight(headQuality);
+            int legWeight  = GetQualityWeight(legQuality);
+            int roll       = UnityEngine.Random.Range(0, headWeight + legWeight);
+
+            return roll < headWeight ? headCandidate : legCandidate;
+        }
+
+        /// <summary>
+        /// Returns a random trait from the Normal-quality fallback pool
+        /// when both deposited parts have no valid candidate (None).
+        /// Pool: Brutish, Diligent.
+        /// </summary>
+        private static CoreTrait GetFallbackTrait()
+        {
+            return UnityEngine.Random.Range(0, 2) == 0 ? CoreTrait.Brutish : CoreTrait.Diligent;
+        }
+
         [System.Diagnostics.Conditional("UNITY_EDITOR")]
-        private void LogAssembly(OrcQuality quality)
+        private void LogTraitSelection(
+            CoreTrait   headCandidate, CoreQuality headQuality,
+            CoreTrait   legCandidate,  CoreQuality legQuality,
+            CoreTrait   finalTrait)
+        {
+            Debug.Log(
+                $"[AssemblyStation '{gameObject.name}'] Trait selection — " +
+                $"Head: {GetDisplayName(headCandidate)} (w{GetQualityWeight(headQuality)}), " +
+                $"Leg: {GetDisplayName(legCandidate)} (w{GetQualityWeight(legQuality)}). " +
+                $"Final: {GetDisplayName(finalTrait)}.", this);
+        }
+
+        [System.Diagnostics.Conditional("UNITY_EDITOR")]
+        private void LogAssembly(OrcQuality quality, CoreTrait trait)
         {
             Debug.Log(
                 $"[AssemblyStation '{gameObject.name}'] Assembly complete. " +
                 $"Head + {_torsoLabel} + {_armsLabel} + Leg. " +
-                $"Quality: {quality}, Tendency: {_tendencyLabel}.", this);
+                $"Quality: {quality}, Trait: {GetDisplayName(trait)}.", this);
         }
     }
 }
