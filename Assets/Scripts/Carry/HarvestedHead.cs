@@ -29,6 +29,7 @@ namespace OrcFarm.Carry
         private Collider         _col;
         private bool             _isCarried;
         private ICarryController _carry;
+        private Vector3          _initialLocalScale;
 
         // ── Quality ────────────────────────────────────────────────────────────
 
@@ -94,6 +95,7 @@ namespace OrcFarm.Carry
             TraitCandidate = OrcTrait.None;
 
             transform.SetParent(null);
+            transform.localScale = _initialLocalScale;
 
             _rb.isKinematic = false;
             _rb.linearVelocity  = Vector3.zero;
@@ -117,8 +119,9 @@ namespace OrcFarm.Carry
 
         private void Awake()
         {
-            _rb  = GetComponent<Rigidbody>();
-            _col = GetComponent<Collider>();
+            _rb                = GetComponent<Rigidbody>();
+            _col               = GetComponent<Collider>();
+            _initialLocalScale = transform.localScale;
         }
 
         // ── Called by CarryController only ─────────────────────────────────────
@@ -144,9 +147,10 @@ namespace OrcFarm.Carry
             }
             _rb.isKinematic = true;
 
-            transform.SetParent(anchor);
+            transform.SetParent(anchor, false);
             transform.localPosition = Vector3.zero;
             transform.localRotation = Quaternion.identity;
+            transform.localScale    = _initialLocalScale;
         }
 
         /// <summary>
@@ -156,9 +160,10 @@ namespace OrcFarm.Carry
         /// </summary>
         internal void StoreInto(Transform storageRoot)
         {
-            transform.SetParent(storageRoot);
+            transform.SetParent(storageRoot, false);
             transform.localPosition = Vector3.zero;
             transform.localRotation = Quaternion.identity;
+            transform.localScale    = _initialLocalScale;
         }
 
         /// <summary>
@@ -169,8 +174,9 @@ namespace OrcFarm.Carry
         {
             _isCarried = false;
 
-            transform.SetParent(null);
+            transform.SetParent(null, false);
             transform.position = position;
+            transform.localScale = _initialLocalScale;
 
             _rb.isKinematic = false;
 

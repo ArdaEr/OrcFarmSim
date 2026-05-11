@@ -95,6 +95,8 @@ namespace OrcFarm.App
                     }
                 }
 
+                InjectMultiInstanceSceneComponents(c);
+
                 c.Resolve<QuestProgressProxy>().Start();
             });
 
@@ -136,12 +138,18 @@ namespace OrcFarm.App
 
             builder.RegisterEntryPoint<HarvestCoordinator>(Lifetime.Singleton);
 
+        }
+
+        private void InjectMultiInstanceSceneComponents(IObjectResolver container)
+        {
             if (_legPonds != null)
             {
                 for (int i = 0; i < _legPonds.Length; i++)
                 {
                     if (_legPonds[i] != null)
-                        builder.RegisterComponent(_legPonds[i]);
+                    {
+                        container.Inject(_legPonds[i]);
+                    }
                 }
             }
 
@@ -150,7 +158,9 @@ namespace OrcFarm.App
                 for (int i = 0; i < _headStorageContainers.Length; i++)
                 {
                     if (_headStorageContainers[i] != null)
-                        builder.RegisterComponent(_headStorageContainers[i]);
+                    {
+                        container.Inject(_headStorageContainers[i]);
+                    }
                 }
             }
 
@@ -159,10 +169,11 @@ namespace OrcFarm.App
                 for (int i = 0; i < _legStorageContainers.Length; i++)
                 {
                     if (_legStorageContainers[i] != null)
-                        builder.RegisterComponent(_legStorageContainers[i]);
+                    {
+                        container.Inject(_legStorageContainers[i]);
+                    }
                 }
             }
-
         }
 
         private void ResolveSceneReferences()
