@@ -1,4 +1,5 @@
 using OrcFarm.Carry;
+using OrcFarm.Effects;
 using OrcFarm.Interaction;
 using UnityEngine;
 using VContainer;
@@ -19,7 +20,26 @@ namespace OrcFarm.Storage
     [RequireComponent(typeof(Collider))]
     public sealed class LegStorageContainer : MonoBehaviour, IInteractable
     {
+        private const float DefaultStoreShakeIntensity = 1.0f;
+        private const float DefaultRetrieveShakeIntensity = 1.15f;
+        private const float MinShakeDirectionLengthSquared = 0.0001f;
+
         [SerializeField] private Transform _contentsRoot;
+
+        [Header("Jelly Shake")]
+        [Tooltip("Optional child jelly controller played when a leg enters or leaves storage.")]
+        [SerializeField] private JellyShakeController _jellyShakeController;
+
+        [Tooltip("Origin used to calculate the direction of the leg entering or leaving the jelly.")]
+        [SerializeField] private Transform _jellyShakeOrigin;
+
+        [Tooltip("Shake intensity when a carried leg is put into storage.")]
+        [Min(0.0f)]
+        [SerializeField] private float _storeShakeIntensity = DefaultStoreShakeIntensity;
+
+        [Tooltip("Shake intensity when a leg is removed from storage.")]
+        [Min(0.0f)]
+        [SerializeField] private float _retrieveShakeIntensity = DefaultRetrieveShakeIntensity;
 
         private ICarryController _carry;
         private bool             _loggedMissingInjection;
@@ -73,7 +93,10 @@ namespace OrcFarm.Storage
             if (_carry.IsCarryingLeg)
             {
                 if (_carry.TryStoreLeg(_contentsRoot))
+                {
+                    PlayJellyShakeFromTopLeg(_storeShakeIntensity);
                     LogStored();
+                }
             }
             else if (!_carry.IsCarrying && _contentsRoot.childCount > 0)
             {
@@ -117,6 +140,7 @@ namespace OrcFarm.Storage
             }
 
             quality = leg.Quality;
+            PlayJellyShake(GetShakeDirection(last), _retrieveShakeIntensity);
             last.SetParent(null);
             last.gameObject.SetActive(false);
             return true;
@@ -136,8 +160,55 @@ namespace OrcFarm.Storage
                 return;
             }
 
+            Vector3 shakeDirection = GetShakeDirection(last);
             _carry.PickUpLeg(leg);
+            PlayJellyShake(shakeDirection, _retrieveShakeIntensity);
             LogRetrieved();
+        }
+
+        private void PlayJellyShakeFromTopLeg(float intensity)
+        {
+            if (_contentsRoot.childCount == 0)
+            {
+                return;
+            }
+
+            Transform last = _contentsRoot.GetChild(_contentsRoot.childCount - 1);
+            PlayJellyShake(GetShakeDirection(last), intensity);
+        }
+
+        private Vector3 GetShakeDirection(Transform legTransform)
+        {
+            Transform origin = _jellyShakeOrigin;
+
+            if (origin == null && _jellyShakeController != null)
+            {
+                origin = _jellyShakeController.transform;
+            }
+
+            if (origin == null)
+            {
+                origin = transform;
+            }
+
+            Vector3 direction = legTransform.position - origin.position;
+
+            if (direction.sqrMagnitude < MinShakeDirectionLengthSquared)
+            {
+                direction = transform.forward;
+            }
+
+            return direction;
+        }
+
+        private void PlayJellyShake(Vector3 direction, float intensity)
+        {
+            if (_jellyShakeController == null || intensity <= 0.0f)
+            {
+                return;
+            }
+
+            _jellyShakeController.PlayGrabShake(direction, intensity);
         }
 
         [System.Diagnostics.Conditional("UNITY_EDITOR")]

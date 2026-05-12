@@ -6,6 +6,7 @@
         "OrcFarm.Interaction",
         "OrcFarm.Carry",
         "OrcFarm.Inventory",
+        "OrcFarm.Effects",
         "VContainer"
     ],
     "includePlatforms": [],
