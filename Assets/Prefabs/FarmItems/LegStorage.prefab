@@ -240,6 +240,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 26d5f52a7f510e44cbb2e6915596ba4f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: OrcFarm.Storage::OrcFarm.Storage.LegStorageContainer
+  _contentsRoots:
+  - {fileID: 8148260454773990121}
   _contentsRoot: {fileID: 8148260454773990121}
   _jellyShakeController: {fileID: 7473465031517211706}
   _jellyShakeOrigin: {fileID: 3405889176460225831}
