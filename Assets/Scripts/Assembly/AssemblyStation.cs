@@ -30,7 +30,6 @@ namespace OrcFarm.Assembly
     /// MonoBehaviour justification: owns Unity lifecycle (Awake validation, Collider for
     /// interaction detection) and holds scene-side serialized references.
     /// </summary>
-    [RequireComponent(typeof(Collider))]
     public sealed class AssemblyStation : MonoBehaviour, IInteractable, IQuestObjectiveActionPublisherTarget
     {
         // ── References ─────────────────────────────────────────────────────────
