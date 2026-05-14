@@ -55,6 +55,10 @@ namespace OrcFarm.Workers
         [Tooltip("Distance at which the hauler considers itself arrived at a target.")]
         [SerializeField] private float _arrivalDistance = 0.5f;
 
+        [Header("Animation")]
+        [Tooltip("Animator with a bool parameter named Walking.")]
+        [SerializeField] private Animator _animator;
+
         // ── Search ─────────────────────────────────────────────────────────────
 
         [Header("Search")]
@@ -97,6 +101,12 @@ namespace OrcFarm.Workers
         private HarvestedHead _targetHead;
         private Rigidbody     _targetRb;   // cached at grab time, not at search time
         private Collider      _targetCol;  // cached at search time; used to detect player steal
+        private bool          _walkedThisFrame;
+        private bool          _animatorWalking;
+
+        private const string WalkingParameterName = "Walking";
+        private const float MovementEpsilonSqr = 0.000001f;
+        private static readonly int WalkingHash = Animator.StringToHash(WalkingParameterName);
 
         // ── Timers ─────────────────────────────────────────────────────────────
 
@@ -178,6 +188,11 @@ namespace OrcFarm.Workers
                 throw new System.InvalidOperationException(
                     $"[HaulerWorker '{gameObject.name}'] _carryAnchor not assigned.");
 
+            if (_animator == null)
+            {
+                _animator = GetComponentInChildren<Animator>();
+            }
+
             _sqArrival = _arrivalDistance * _arrivalDistance;
         }
 
@@ -204,10 +219,22 @@ namespace OrcFarm.Workers
         private void Update()
         {
             // Do nothing until the player has chosen Keep or Store.
-            if (!IsKept && !IsStored) return;
+            if (!IsKept && !IsStored)
+            {
+                SetWalking(false);
+                return;
+            }
 
             if (IsKept) TickInstability(); // instability only applies to active haulers
+
+            _walkedThisFrame = false;
             TickState();
+            SetWalking(_walkedThisFrame);
+        }
+
+        private void OnDisable()
+        {
+            SetWalking(false);
         }
 
         // ── Instability ────────────────────────────────────────────────────────
@@ -416,13 +443,27 @@ namespace OrcFarm.Workers
         {
             // Flatten to hauler's Y so it doesn't pitch up/down on uneven terrain.
             Vector3 flatTarget = new Vector3(target.x, transform.position.y, target.z);
+            Vector3 startPosition = transform.position;
 
             transform.position = Vector3.MoveTowards(
                 transform.position, flatTarget, CurrentSpeed * Time.deltaTime);
 
+            _walkedThisFrame |= (transform.position - startPosition).sqrMagnitude > MovementEpsilonSqr;
+
             Vector3 dir = flatTarget - transform.position;
             if (dir.sqrMagnitude > 0.001f)
                 transform.rotation = Quaternion.LookRotation(dir);
+        }
+
+        private void SetWalking(bool isWalking)
+        {
+            if (_animator == null || _animatorWalking == isWalking)
+            {
+                return;
+            }
+
+            _animatorWalking = isWalking;
+            _animator.SetBool(WalkingHash, isWalking);
         }
 
         // XZ-only to match MoveToward which also flattens to the orc's Y.
