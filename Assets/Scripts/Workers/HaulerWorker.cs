@@ -1,5 +1,6 @@
 using OrcFarm.Carry;
 using UnityEngine;
+using UnityEngine.AI;
 
 namespace OrcFarm.Workers
 {
@@ -24,6 +25,7 @@ namespace OrcFarm.Workers
     /// MonoBehaviour justification: per-frame movement loop, Unity physics queries,
     /// and scene-side serialized references all require MonoBehaviour lifecycle.
     /// </summary>
+    [RequireComponent(typeof(NavMeshAgent))]
     public sealed class HaulerWorker : MonoBehaviour
     {
         // ── Route ──────────────────────────────────────────────────────────────
@@ -46,6 +48,9 @@ namespace OrcFarm.Workers
         // ── Movement ───────────────────────────────────────────────────────────
 
         [Header("Movement")]
+
+        [SerializeField] private NavMeshAgent _navMeshAgent;
+
         [Tooltip("Normal movement speed in m/s.")]
         [SerializeField] private float _moveSpeed = 3f;
 
@@ -101,11 +106,11 @@ namespace OrcFarm.Workers
         private HarvestedHead _targetHead;
         private Rigidbody     _targetRb;   // cached at grab time, not at search time
         private Collider      _targetCol;  // cached at search time; used to detect player steal
-        private bool          _walkedThisFrame;
         private bool          _animatorWalking;
+        private bool          _hasMovementDestination;
+        private Vector3       _movementDestination;
 
         private const string WalkingParameterName = "Walking";
-        private const float MovementEpsilonSqr = 0.000001f;
         private static readonly int WalkingHash = Animator.StringToHash(WalkingParameterName);
 
         // ── Timers ─────────────────────────────────────────────────────────────
@@ -147,8 +152,8 @@ namespace OrcFarm.Workers
             IsKept   = true;
             IsStored = false;
             PenSpot  = null;
-            _state   = HaulerState.WalkingToWaitPoint;
             gameObject.SetActive(true);
+            EnterState(HaulerState.WalkingToWaitPoint);
         }
 
         /// <summary>
@@ -159,8 +164,8 @@ namespace OrcFarm.Workers
         {
             IsStored = true;
             PenSpot  = spot;
-            _state   = HaulerState.WalkingToPen;
             gameObject.SetActive(true);
+            EnterState(HaulerState.WalkingToPen);
         }
 
         // ── Setup ──────────────────────────────────────────────────────────────
@@ -188,12 +193,25 @@ namespace OrcFarm.Workers
                 throw new System.InvalidOperationException(
                     $"[HaulerWorker '{gameObject.name}'] _carryAnchor not assigned.");
 
+            if (_navMeshAgent == null)
+            {
+                _navMeshAgent = GetComponent<NavMeshAgent>();
+            }
+
+            if (_navMeshAgent == null)
+            {
+                throw new System.InvalidOperationException(
+                    $"[HaulerWorker '{gameObject.name}'] _navMeshAgent not assigned.");
+            }
+
             if (_animator == null)
             {
                 _animator = GetComponentInChildren<Animator>();
             }
 
             _sqArrival = _arrivalDistance * _arrivalDistance;
+            _navMeshAgent.speed = CurrentSpeed;
+            _navMeshAgent.stoppingDistance = _arrivalDistance;
         }
 
         private void Start()
@@ -221,19 +239,21 @@ namespace OrcFarm.Workers
             // Do nothing until the player has chosen Keep or Store.
             if (!IsKept && !IsStored)
             {
+                StopMovement();
                 SetWalking(false);
                 return;
             }
 
             if (IsKept) TickInstability(); // instability only applies to active haulers
 
-            _walkedThisFrame = false;
+            SyncAgentSpeed();
             TickState();
-            SetWalking(_walkedThisFrame);
+            SetWalking(IsMoving());
         }
 
         private void OnDisable()
         {
+            StopMovement();
             SetWalking(false);
         }
 
@@ -296,7 +316,7 @@ namespace OrcFarm.Workers
             if (_targetHead == null || !_targetHead.gameObject.activeInHierarchy)
             {
                 ClearTarget();
-                _state = HaulerState.Returning;
+                EnterState(HaulerState.Returning);
                 return;
             }
 
@@ -304,46 +324,54 @@ namespace OrcFarm.Workers
             if (_targetCol != null && !_targetCol.enabled)
             {
                 ClearTarget();
-                _state = HaulerState.Returning;
+                EnterState(HaulerState.Returning);
                 return;
             }
 
-            MoveToward(_targetHead.transform.position);
+            if (!HasReachedDestination())
+            {
+                return;
+            }
 
             if (SqDistTo(_targetHead.transform.position) <= _sqArrival)
+            {
                 GrabHead();
+                return;
+            }
+
+            SetMovementDestination(_targetHead.transform.position);
         }
 
         private void TickCarrying()
         {
-            MoveToward(_storageWalkTarget.position);
-
-            if (SqDistTo(_storageWalkTarget.position) <= _sqArrival)
+            if (HasReachedDestination())
+            {
                 DeliverHead();
+            }
         }
 
         private void TickReturning()
         {
-            MoveToward(_waitPoint.position);
-
-            if (SqDistTo(_waitPoint.position) <= _sqArrival)
-                _state = HaulerState.Idle;
+            if (HasReachedDestination())
+            {
+                EnterState(HaulerState.Idle);
+            }
         }
 
         private void TickWalkingToWaitPoint()
         {
-            MoveToward(_waitPoint.position);
-
-            if (SqDistTo(_waitPoint.position) <= _sqArrival)
-                _state = HaulerState.Idle;
+            if (HasReachedDestination())
+            {
+                EnterState(HaulerState.Idle);
+            }
         }
 
         private void TickWalkingToPen()
         {
-            MoveToward(PenSpot.position);
-
-            if (SqDistTo(PenSpot.position) <= _sqArrival)
-                _state = HaulerState.StoredInPen;
+            if (HasReachedDestination())
+            {
+                EnterState(HaulerState.StoredInPen);
+            }
         }
 
         // ── Head interactions ──────────────────────────────────────────────────
@@ -380,7 +408,7 @@ namespace OrcFarm.Workers
 
             _targetHead = best;
             _targetCol  = bestCol;
-            _state      = HaulerState.MovingToHead;
+            EnterState(HaulerState.MovingToHead);
         }
 
         private void GrabHead()
@@ -413,7 +441,7 @@ namespace OrcFarm.Workers
             _targetHead.transform.localPosition = Vector3.zero;
             _targetHead.transform.localRotation = Quaternion.identity;
 
-            _state = HaulerState.Carrying;
+            EnterState(HaulerState.Carrying);
         }
 
         private void DeliverHead()
@@ -427,7 +455,7 @@ namespace OrcFarm.Workers
 
             LogDelivery();
             ClearTarget();
-            _state = HaulerState.Returning;
+            EnterState(HaulerState.Returning);
         }
 
         private void ClearTarget()
@@ -439,20 +467,136 @@ namespace OrcFarm.Workers
 
         // ── Movement ───────────────────────────────────────────────────────────
 
-        private void MoveToward(Vector3 target)
+        private void EnterState(HaulerState nextState)
         {
-            // Flatten to hauler's Y so it doesn't pitch up/down on uneven terrain.
-            Vector3 flatTarget = new Vector3(target.x, transform.position.y, target.z);
-            Vector3 startPosition = transform.position;
+            _state = nextState;
 
-            transform.position = Vector3.MoveTowards(
-                transform.position, flatTarget, CurrentSpeed * Time.deltaTime);
+            switch (nextState)
+            {
+                case HaulerState.MovingToHead:
+                    SetMovementDestination(_targetHead.transform.position);
+                    break;
+                case HaulerState.Carrying:
+                    SetMovementDestination(_storageWalkTarget.position);
+                    break;
+                case HaulerState.Returning:
+                case HaulerState.WalkingToWaitPoint:
+                    SetMovementDestination(_waitPoint.position);
+                    break;
+                case HaulerState.WalkingToPen:
+                    SetMovementDestination(PenSpot.position);
+                    break;
+                case HaulerState.Idle:
+                case HaulerState.StoredInPen:
+                    StopMovement();
+                    break;
+            }
+        }
 
-            _walkedThisFrame |= (transform.position - startPosition).sqrMagnitude > MovementEpsilonSqr;
+        private void SetMovementDestination(Vector3 destination)
+        {
+            if (_navMeshAgent == null || !_navMeshAgent.enabled)
+            {
+                return;
+            }
 
-            Vector3 dir = flatTarget - transform.position;
-            if (dir.sqrMagnitude > 0.001f)
-                transform.rotation = Quaternion.LookRotation(dir);
+            _movementDestination = destination;
+            _hasMovementDestination = true;
+            _navMeshAgent.isStopped = false;
+            _navMeshAgent.stoppingDistance = _arrivalDistance;
+            _navMeshAgent.speed = CurrentSpeed;
+
+            if (!IsAgentReady())
+            {
+                LogMissingNavMesh();
+                return;
+            }
+
+            if (!_navMeshAgent.SetDestination(destination))
+            {
+                LogDestinationFailed();
+            }
+        }
+
+        private void StopMovement()
+        {
+            if (!_hasMovementDestination)
+            {
+                return;
+            }
+
+            _hasMovementDestination = false;
+
+            if (!IsAgentReady())
+            {
+                return;
+            }
+
+            _navMeshAgent.isStopped = true;
+            _navMeshAgent.ResetPath();
+        }
+
+        private void SyncAgentSpeed()
+        {
+            if (_navMeshAgent == null || !_navMeshAgent.enabled)
+            {
+                return;
+            }
+
+            float speed = CurrentSpeed;
+            if (!Mathf.Approximately(_navMeshAgent.speed, speed))
+            {
+                _navMeshAgent.speed = speed;
+            }
+        }
+
+        private bool HasReachedDestination()
+        {
+            if (!_hasMovementDestination)
+            {
+                return true;
+            }
+
+            if (!IsAgentReady())
+            {
+                return SqDistTo(_movementDestination) <= _sqArrival;
+            }
+
+            if (_navMeshAgent.pathPending)
+            {
+                return false;
+            }
+
+            if (_navMeshAgent.hasPath)
+            {
+                return _navMeshAgent.remainingDistance <= _navMeshAgent.stoppingDistance;
+            }
+
+            return SqDistTo(_movementDestination) <= _sqArrival;
+        }
+
+        private bool IsMoving()
+        {
+            if (!IsAgentReady())
+            {
+                return false;
+            }
+
+            return _navMeshAgent.pathPending ||
+                   (_navMeshAgent.hasPath &&
+                    _navMeshAgent.remainingDistance > _navMeshAgent.stoppingDistance);
+        }
+
+        private bool IsAgentReady()
+        {
+            if (_navMeshAgent == null ||
+                !_navMeshAgent.enabled ||
+                !_navMeshAgent.gameObject.activeInHierarchy)
+            {
+                return false;
+            }
+
+            return _navMeshAgent.isOnNavMesh;
         }
 
         private void SetWalking(bool isWalking)
@@ -466,9 +610,8 @@ namespace OrcFarm.Workers
             _animator.SetBool(WalkingHash, isWalking);
         }
 
-        // XZ-only to match MoveToward which also flattens to the orc's Y.
-        // Using 3D distance caused arrival to never trigger when the target
-        // transform's Y differed from the orc's Y by more than _arrivalDistance.
+        // XZ-only to match old manual movement arrival behavior and to provide
+        // a fallback when the NavMeshAgent cannot report path distance.
         private float SqDistTo(Vector3 target)
         {
             float dx = transform.position.x - target.x;
@@ -491,6 +634,21 @@ namespace OrcFarm.Workers
         {
             Debug.Log(
                 $"[HaulerWorker '{gameObject.name}'] Head delivered to storage.", this);
+        }
+
+        [System.Diagnostics.Conditional("UNITY_EDITOR")]
+        private void LogMissingNavMesh()
+        {
+            Debug.LogWarning(
+                $"[HaulerWorker '{gameObject.name}'] NavMeshAgent is not on a NavMesh.", this);
+        }
+
+        [System.Diagnostics.Conditional("UNITY_EDITOR")]
+        private void LogDestinationFailed()
+        {
+            Debug.LogWarning(
+                $"[HaulerWorker '{gameObject.name}'] NavMeshAgent rejected destination " +
+                $"{_movementDestination}.", this);
         }
     }
 }
